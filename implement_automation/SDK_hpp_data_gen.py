@@ -199,3 +199,42 @@ with open('SDK_lib/fc2_wght.hpp','w') as lib_file:
                 lib_file.write(text_store)
                 
     lib_file.write('};')
+
+
+#%% number4 ref pic gen
+
+import numpy as np
+
+def preprocess_input_img_mem(img):
+    # img shape (28,28,1)
+    img_processed=np.pad(img,((2, 2), (2, 2), (0,0)),'constant',constant_values=0)
+    img_processed=np.multiply(img_processed,2**3)
+    img_processed=img_processed.astype(np.int8)
+    
+    img_processed=np.transpose(img_processed,[1,0,2])
+    img_processed=np.reshape(img_processed, [32*32,1])
+    img_processed=np.tile(img_processed,[1,5])
+    
+    roller=np.array([  0,   1,   2,   3,   4])
+    
+    for i in range(img_processed.shape[1]):
+        img_processed[:,i]=np.roll(img_processed[:,i],-roller[i])
+        
+    img_processed=np.pad(img_processed,((0, 0), (0, 3)),'constant',constant_values=0)
+    
+    return img_processed
+
+ref_pic=np.load("ref_number4_pic.npy")
+
+ref_pic=preprocess_input_img_mem(ref_pic)
+
+with open('SDK_lib/ref_pic.hpp','w') as lib_file:
+    lib_file.write('volatile unsigned long long ref_pic[1024] = {\n')
+    
+    for row in range(1024):
+        text_store='0x'
+        text_store+=bytes(ref_pic[row,::-1]).hex()
+        text_store+=' ,\n'
+        lib_file.write(text_store)
+                
+    lib_file.write('};')

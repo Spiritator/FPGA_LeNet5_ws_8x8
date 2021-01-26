@@ -11,7 +11,6 @@ RTL verification mem generation and validation
 #%% LeNet5 weight stationary 8x8 Vivado Project data prep L1
 
 import numpy as np
-from tqdm import tqdm
 import h5py
 
 lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
@@ -127,11 +126,9 @@ for i in range(2):
 #%% LeNet5 weight stationary 8x8 Vivado Project data prep Pool1
 
 import numpy as np
-from tqdm import tqdm
 import h5py
 
-#lenet_intermediate=np.load("D:/DNN/Simulator/test_images and intermediate/lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
-lenet_intermediate=np.load("E:/DNN/test_images and intermediate/lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
 lenet_intermediate=list(lenet_intermediate)
 ifmap=lenet_intermediate[1]
 ofmap=lenet_intermediate[2]
@@ -335,8 +332,7 @@ for i in range(3):
 import numpy as np
 import h5py
 
-#lenet_intermediate=np.load("D:/DNN/Simulator/test_images and intermediate/lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
-lenet_intermediate=np.load("E:/DNN/test_images and intermediate/lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
 lenet_intermediate=list(lenet_intermediate)
 ifmap=lenet_intermediate[3]
 ofmap=lenet_intermediate[4]
