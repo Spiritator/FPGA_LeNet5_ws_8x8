@@ -1,0 +1,25 @@
+                                                          
+                                                          
+     OOOOOOOOO                        hhhhhhh             
+   OO:::::::::OO                      h:::::h             
+ OO:::::::::::::OO                    h:::::h             
+O:::::::OOO:::::::O                   h:::::h             
+O::::::O   O::::::O    cccccccccccccccch::::h hhhhh       
+O:::::O     O:::::O  cc:::::::::::::::ch::::hh:::::hhh    
+O:::::O     O:::::O c:::::::::::::::::ch::::::::::::::hh  
+O:::::O     O:::::Oc:::::::cccccc:::::ch:::::::hhh::::::h 
+O:::::O     O:::::Oc::::::c     ccccccch::::::h   h::::::h
+O:::::O     O:::::Oc:::::c             h:::::h     h:::::h
+O:::::O     O:::::Oc:::::c             h:::::h     h:::::h
+O::::::O   O::::::Oc::::::c     ccccccch:::::h     h:::::h
+O:::::::OOO:::::::Oc:::::::cccccc:::::ch:::::h     h:::::h
+ OO:::::::::::::OO  c:::::::::::::::::ch:::::h     h:::::h
+   OO:::::::::OO     cc:::::::::::::::ch:::::h     h:::::h
+     OOOOOOOOO         cccccccccccccccchhhhhhh     hhhhhhh
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          
+                                                          

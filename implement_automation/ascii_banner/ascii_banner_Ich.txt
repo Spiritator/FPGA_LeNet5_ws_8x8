@@ -1,0 +1,25 @@
+                                                 
+                                                 
+IIIIIIIIII                   hhhhhhh             
+I::::::::I                   h:::::h             
+I::::::::I                   h:::::h             
+II::::::II                   h:::::h             
+  I::::I      cccccccccccccccch::::h hhhhh       
+  I::::I    cc:::::::::::::::ch::::hh:::::hhh    
+  I::::I   c:::::::::::::::::ch::::::::::::::hh  
+  I::::I  c:::::::cccccc:::::ch:::::::hhh::::::h 
+  I::::I  c::::::c     ccccccch::::::h   h::::::h
+  I::::I  c:::::c             h:::::h     h:::::h
+  I::::I  c:::::c             h:::::h     h:::::h
+  I::::I  c::::::c     ccccccch:::::h     h:::::h
+II::::::IIc:::::::cccccc:::::ch:::::h     h:::::h
+I::::::::I c:::::::::::::::::ch:::::h     h:::::h
+I::::::::I  cc:::::::::::::::ch:::::h     h:::::h
+IIIIIIIIII    cccccccccccccccchhhhhhh     hhhhhhh
+                                                 
+                                                 
+                                                 
+                                                 
+                                                 
+                                                 
+                                                 
