@@ -7,15 +7,15 @@ LD_SRCS += \
 ../src/lscript.ld 
 
 C_SRCS += \
-../src/helloworld.c \
+../src/inference_run.c \
 ../src/platform.c 
 
 OBJS += \
-./src/helloworld.o \
+./src/inference_run.o \
 ./src/platform.o 
 
 C_DEPS += \
-./src/helloworld.d \
+./src/inference_run.d \
 ./src/platform.d 
 
 
