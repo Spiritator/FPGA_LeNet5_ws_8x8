@@ -119,10 +119,13 @@ with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
     kernel=weight_f['dense_1']['dense_1/kernel:0'][()]
     bias=weight_f['dense_1']['dense_1/bias:0'][()]
 
+kernel_in=np.reshape(kernel,(7,7,36,128))
+kernel_in=np.transpose(kernel_in,[1,0,2,3])
+kernel_in=np.reshape(kernel_in,[7*7*36,128])
 
-kernel_in_PE=np.stack(np.split(kernel,128/8,axis=-1))
-kernel_in_PE=np.stack(np.split(kernel_in_PE,1764/882,axis=1),axis=1)
-kernel_in_PE=np.pad(kernel_in_PE,((0, 0), (0, 0), (0, 6), (0, 0)),'constant',constant_values=0)
+kernel_in_PE=np.pad(kernel_in,((0, 12), (0, 0)),'constant',constant_values=0)
+kernel_in_PE=np.stack(np.split(kernel_in_PE,128/8,axis=-1))
+kernel_in_PE=np.stack(np.split(kernel_in_PE,2,axis=1),axis=1)
 kernel_in_PE=np.stack(np.split(kernel_in_PE,888/8,axis=2),axis=2)
 kernel_in_PE=np.multiply(kernel_in_PE,2**3)
 kernel_in_PE=np.round(kernel_in_PE)
