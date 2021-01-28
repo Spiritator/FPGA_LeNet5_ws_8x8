@@ -131,7 +131,7 @@ reg [9:0] burst_cnt;
 
 // state flags
 wire zerofilled;
-reg wr_cache;
+reg wr_cache,ifmapcmplt;
 reg [1:0] fill_step,rdydly;
 
 /*
@@ -235,7 +235,7 @@ begin
         current_state <= next_state; 
 end
 
-always @(current_state or bus2ip_mst_cmdack or wght_load or ifmap_load or ofmap_offload or bus2ip_mstrd_sof_n or bus2ip_mstrd_eof_n or bus2ip_mst_cmplt or padding or zerofilled or ip2bus_mstwr_sof_n or ip2bus_mstwr_eof_n) 
+always @(current_state or bus2ip_mst_cmdack or wght_load or ifmap_load or ofmap_offload or bus2ip_mstrd_sof_n or bus2ip_mstrd_eof_n or bus2ip_mst_cmplt or padding or zerofilled or ip2bus_mstwr_sof_n or ip2bus_mstwr_eof_n or ifmapcmplt or ifmap_ready) 
 begin
     case (current_state)
         idle: 
@@ -284,13 +284,18 @@ begin
         end
         load_ifmap_cmplt:
         begin
-            if (bus2ip_mst_cmplt)
-                if (padding)
-                   next_state=ifmap_filling_zero; 
-                else
-                    next_state=idle;
-            else
+            if (ifmapcmplt) begin
+                if (padding) begin
+                    next_state=ifmap_filling_zero; 
+                end else begin
+                    if (ifmap_ready) 
+                        next_state=idle;
+                    else 
+                        next_state=load_ifmap_cmplt;
+                end
+            end else begin
                 next_state=load_ifmap_cmplt;
+            end
         end
         ifmap_filling_zero:
         begin
@@ -676,6 +681,7 @@ begin
         burst_cnt<=10'd0;
         write_halt<=1'b0;
         wr_cache<=1'b0;
+        ifmapcmplt<=1'b0;
     end else begin
         case (current_state)
             idle: 
@@ -709,6 +715,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
             load_wght_req:
             begin
@@ -728,6 +735,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
             load_wght_burst:
             begin
@@ -746,6 +754,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
 
                 if (!ip2bus_mstrd_dst_rdy_n && !bus2ip_mstrd_src_rdy_n) 
                 begin
@@ -776,6 +785,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
             load_ifmap_req:
             begin
@@ -795,6 +805,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
             load_ifmap_burst:
             begin
@@ -808,6 +819,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
 
                 if (!ip2bus_mstrd_dst_rdy_n && !bus2ip_mstrd_src_rdy_n) 
                 begin
@@ -844,17 +856,6 @@ begin
                     Icidx<=Icidx;
                     Psplitidx<=Psplitidx;
                 end
-
-                // if (psum_split_condense) 
-                // begin
-                //     slc_iaddrb_ps<=Psplitidx*ifmapRpad;
-                //     slc_iaddrb_ic<=Iridx;
-                // end 
-                // else 
-                // begin
-                //     slc_iaddrb_ps<=Psplitidx*i2dsize;
-                //     slc_iaddrb_ic<=Icidx*ifmapRpad+Iridx;
-                // end
                 
                 slc_iaddrb_ps<=Psplitidx*i2dsize;
                 slc_iaddrb_ic<=Icidx*ifmapRpad+Iridx;
@@ -872,6 +873,11 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+
+                if (bus2ip_mst_cmplt)
+                    ifmapcmplt<=1'b1;
+                else
+                    ifmapcmplt<=ifmapcmplt;
 
                 ifmap_ready<=rdydly[1];
                 rdydly<=rdydly<<1;
@@ -900,6 +906,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
 
                 case (fill_step)
                     2'd0: 
@@ -1073,6 +1080,8 @@ begin
                 fill_step<=2'd0;
                 rdydly<=rdydly;
                 wr_cache<=1'b1;
+                ifmapcmplt<=1'b0;
+
                 if (wr_cache) 
                 begin
                     ofmap_addrin<=ofmap_addrin;
@@ -1101,6 +1110,7 @@ begin
                 fill_step<=2'd0;
                 rdydly<=rdydly;
                 wr_cache<=1'b1;
+                ifmapcmplt<=1'b0;
 
                 if (!ip2bus_mstwr_src_rdy_n && !bus2ip_mstwr_dst_rdy_n) 
                 begin
@@ -1133,6 +1143,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
             default: 
             begin
@@ -1152,6 +1163,7 @@ begin
                 burst_cnt<=ofmap_addrin;
                 write_halt<=1'b0;
                 wr_cache<=1'b0;
+                ifmapcmplt<=1'b0;
             end
         endcase
     end

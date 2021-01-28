@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  48564	 259984	  20696	 329244	  5061c	inference_run_pic.elf
+  90200	 262240	  20824	 373264	  5b210	inference_run_pic.elf
