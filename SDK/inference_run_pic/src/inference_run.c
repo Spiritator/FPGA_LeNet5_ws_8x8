@@ -192,6 +192,14 @@ int main()
     Xil_Out64(OP_CTRL,DLA_cmd);
     xil_printf("Op cmd %016llx\n\r", DLA_cmd);
 
+    while(true)
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
+    }
+
+
 
     //=============================
     //    Convolution 1 Tile 0
@@ -214,6 +222,7 @@ int main()
     // {
     //     DLA_status=Xil_In64(STATUS_FLAGS);
     //     read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    //     printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
     // }
 
     // config done
@@ -274,7 +283,6 @@ int main()
     {
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
-        printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
     }
 
     //=============================
@@ -442,6 +450,7 @@ int main()
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
 
+
     //=============================
     //    Maxpooling 1 Tile 0
     //=============================
@@ -480,14 +489,10 @@ int main()
     {
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
-        xil_printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \n\r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
     }
     // load ifmap cmd lift
     DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
     Xil_Out64(BURST_CTRL,DLA_cmd);
-
-    DLA_cmd = Xil_In64(CONFIG_REGS);
-    xil_printf("Config Regs Read In %016llx\n\r", DLA_cmd);
 
     // check FSM comp and data
     xil_printf("Load Ifmap\n\r");
@@ -495,7 +500,6 @@ int main()
     {
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
-        xil_printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
     }
 
     //=============================

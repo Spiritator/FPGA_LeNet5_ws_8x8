@@ -280,14 +280,17 @@ axi_lite_wrapper AXI_lite(  .s00_axi_aclk(s00_axi_aclk), .s00_axi_aresetn(s00_ax
 		                    .s00_axi_araddr(s00_axi_araddr), .s00_axi_arprot(s00_axi_arprot), .s00_axi_arvalid(s00_axi_arvalid), .s00_axi_arready(s00_axi_arready),
 		                    .s00_axi_rdata(s00_axi_rdata), .s00_axi_rresp(s00_axi_rresp), .s00_axi_rvalid(s00_axi_rvalid), .s00_axi_rready(s00_axi_rready),
                             .dataload_ready(dataload_ready), .tile_done(tile_done), .op_done(op_done), .AXI4_cmdack(bus2ip_mst_cmdack), .AXI4_error(AXI4_error), .FSM_comp(FSM_comp), .FSM_data(FSM_data),
-                            .rst(rst), .axi_rst(axi_rst), .config_load(config_load), .config_done(config_done), .op_go(op_go),
-                            .psum_split_condense(psum_split_condense), .padding(padding), .maxpooling(maxpooling), .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel), .bias_len(bias_len),
-                            .wght_load(wght_load), .ifmap_load(ifmap_load), .ofmap_offload(ofmap_offload), .ctrl_addr(ctrl_addr), .ctrl_mst_length(ctrl_mst_length),
-                            
+
                             .psum_split_condense_val(psum_split_condense_val),
 		                    .padding_val(padding_val),
 		                    .bias_len_val(bias_len_val),
 		                    .maxpooling_val(maxpooling_val),
+                            
+                            .rst(rst), .axi_rst(axi_rst), .config_load(config_load), .config_done(config_done), .op_go(op_go),
+                            .psum_split_condense(psum_split_condense), .padding(padding), .maxpooling(maxpooling), .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel), .bias_len(bias_len),
+                            .wght_load(wght_load), .ifmap_load(ifmap_load), .ofmap_offload(ofmap_offload), .ctrl_addr(ctrl_addr), .ctrl_mst_length(ctrl_mst_length)
+                            
+                            
                             );
 
 // data fetching controller

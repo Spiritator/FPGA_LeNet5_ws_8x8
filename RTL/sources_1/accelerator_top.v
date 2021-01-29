@@ -153,6 +153,6 @@ activation_outtrunc relu_trunc5(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[12*wd
 activation_outtrunc relu_trunc6(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[14*wd-1:12*wd]),.ofmap(ofmap_dout[7*wd-1:6*wd]));
 activation_outtrunc relu_trunc7(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[16*wd-1:14*wd]),.ofmap(ofmap_dout[8*wd-1:7*wd]));
 
-pooling_compare pool_unit(.clk(clk),.rst(rst),.poolwrite(ofmap_wen_b),.ifmap_pool_in(ifmap_dout_b),.ofmap_pool_out(ofmap_pool_out));
+pooling_compare pool_unit(.clk(clk),.rst(rst),.poolwrite(ofmap_wen_b[0]),.ifmap_pool_in(ifmap_dout_b),.ofmap_pool_out(ofmap_pool_out));
 
 endmodule

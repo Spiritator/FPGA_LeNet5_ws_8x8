@@ -118,6 +118,9 @@
 		input wire  S_AXI_RREADY
 	);
 
+	reg cmdackstate;
+	wire cmpltstate;
+
 	// AXI4LITE signals
 	reg [C_S_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr;
 	reg  	axi_awready;
@@ -438,9 +441,6 @@
 	// Add user logic here
 	
 	// cmdack flag gen
-	reg cmdackstate;
-	wire cmpltstate;
-
 	assign cmpltstate= (FSM_data==4'd3 || FSM_data==4'd6 || FSM_data==4'd7 || FSM_data==4'd10);
 
 	always @(posedge S_AXI_ACLK) 
