@@ -210,6 +210,12 @@ int main()
     Xil_Out64(CONFIG_REGS,DLA_cmd);
     xil_printf("Config cmd %016llx\n\r", DLA_cmd);
 
+    // while(true)
+    // {
+    //     DLA_status=Xil_In64(STATUS_FLAGS);
+    //     read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    // }
+
     // config done
     DLA_cmd=op_cmd(0,1,0,0,0);
     Xil_Out64(OP_CTRL,DLA_cmd);

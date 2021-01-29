@@ -256,6 +256,13 @@ wire [9:0] inchannel;
 wire [4:0] outchannel;
 wire [1:0] bias_len;
 
+wire psum_split_condense_val,padding_val,maxpooling_val;
+wire [1:0] bias_len_val;
+assign psum_split_condense_val=psum_split_condense;
+assign padding_val=padding;
+assign bias_len_val=bias_len;
+assign maxpooling_val=maxpooling;
+
 
 // systolic PE array & BRAM
 accelerator_top accelerater_ws8x8_bram( .clk(m00_axi_aclk),.rst(rst),
@@ -275,7 +282,12 @@ axi_lite_wrapper AXI_lite(  .s00_axi_aclk(s00_axi_aclk), .s00_axi_aresetn(s00_ax
                             .dataload_ready(dataload_ready), .tile_done(tile_done), .op_done(op_done), .AXI4_cmdack(bus2ip_mst_cmdack), .AXI4_error(AXI4_error), .FSM_comp(FSM_comp), .FSM_data(FSM_data),
                             .rst(rst), .axi_rst(axi_rst), .config_load(config_load), .config_done(config_done), .op_go(op_go),
                             .psum_split_condense(psum_split_condense), .padding(padding), .maxpooling(maxpooling), .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel), .bias_len(bias_len),
-                            .wght_load(wght_load), .ifmap_load(ifmap_load), .ofmap_offload(ofmap_offload), .ctrl_addr(ctrl_addr), .ctrl_mst_length(ctrl_mst_length)
+                            .wght_load(wght_load), .ifmap_load(ifmap_load), .ofmap_offload(ofmap_offload), .ctrl_addr(ctrl_addr), .ctrl_mst_length(ctrl_mst_length),
+                            
+                            .psum_split_condense_val(psum_split_condense_val),
+		                    .padding_val(padding_val),
+		                    .bias_len_val(bias_len_val),
+		                    .maxpooling_val(maxpooling_val),
                             );
 
 // data fetching controller
