@@ -39,7 +39,7 @@ module data_fectch_ctrl(clk, rst, axi_rst, wght_load, ifmap_load, ofmap_offload,
 
 parameter wd=8;
 // FSM of data fetching controller
-parameter idle=4'd0, load_wght_req=4'd1, load_wght_burst=4'd2, load_wght_cmplt=4'd3, load_ifmap_req=4'd4, load_ifmap_burst=4'd5, load_ifmap_cmplt=4'd6, ifmap_filling_zero=4'd7, offload_ofmap_req=4'd8, offload_ofmap_burst=4'd9, offload_ofmap_cmplt=4'd10;
+parameter idle=4'd0, load_wght_req=4'd1, load_wght_burst=4'd2, load_wght_cmplt=4'd3, load_ifmap_req=4'd4, load_ifmap_burst=4'd5, load_ifmap_cmplt=4'd6, ifmap_filling_zero=4'd7, offload_ofmap_req=4'd8, offload_ofmap_burst=4'd9, offload_ofmap_cmplt=4'd10, burst_clear=4'd11;
 parameter fill_left=2'd0, fill_up=2'd1, fill_down=2'd2, fill_right=2'd3;
 // FSM of computation controller
 parameter load_tile_config=4'd1, load_data_b=4'd2, load_data=4'd3, PE_shift_wght=4'd4, slice_check=4'd5, MAC_op=4'd6, offload_ofmap=4'd7, ready_go=4'd8, pooling=4'd9;
@@ -100,12 +100,12 @@ input bus2ip_mstrd_eof_n;
 input bus2ip_mstrd_src_rdy_n;
 input bus2ip_mstrd_src_dsc_n;
 output reg ip2bus_mstrd_dst_rdy_n;
-output reg ip2bus_mstrd_dst_dsc_n;
+output ip2bus_mstrd_dst_dsc_n;
 //IPIC Write
 output [`C_NATIVE_DATA_WIDTH-1:0]ip2bus_mstwr_d;
 output [(`C_M_AXI_DATA_WIDTH/8)-1:0]ip2bus_mstwr_rem;
 output reg ip2bus_mstwr_src_rdy_n;
-output reg ip2bus_mstwr_src_dsc_n;
+output ip2bus_mstwr_src_dsc_n;
 output reg ip2bus_mstwr_sof_n;
 output reg ip2bus_mstwr_eof_n;
 input bus2ip_mstwr_dst_rdy_n;
@@ -208,6 +208,24 @@ assign ip2bus_mst_length = {ctrl_mst_length,3'b0};
 assign ip2bus_mst_lock = 1'b0;
 assign ip2bus_mst_reset = axi_rst;
 
+// AMB burst trigger
+// always @(posedge clk or posedge rst) 
+// begin
+//     if (rst) begin
+//        burst_trig<=1'b0; 
+//     end else begin
+//         if (bus2ip_mst_cmdack) begin
+//             burst_trig<=1'b1;
+//         end else begin
+//             if (ifmap_load || wght_load || ofmap_offload) begin
+//                 burst_trig<=burst_trig;
+//             end else begin
+//                 burst_trig<=1'b0;
+//             end
+//         end
+//     end
+// end
+
 /*
 FFFFFFFFFFFFFFFFFFFFFF   SSSSSSSSSSSSSSS MMMMMMMM               MMMMMMMM
 F::::::::::::::::::::F SS:::::::::::::::SM:::::::M             M:::::::M
@@ -240,12 +258,16 @@ begin
     case (current_state)
         idle: 
         begin
+            // if (burst_trig) begin
+            //     next_state=idle;
+            // end else begin
             case ({wght_load,ifmap_load,ofmap_offload})
                 3'b100: next_state=load_wght_req;
                 3'b010: next_state=load_ifmap_req;
                 3'b001: next_state=offload_ofmap_req;
                 default: next_state=idle;
             endcase
+            //end
         end
         load_wght_req:
         begin
@@ -264,7 +286,7 @@ begin
         load_wght_cmplt:
         begin
             if (bus2ip_mst_cmplt)
-                next_state=idle;
+                next_state=burst_clear;
             else
                 next_state=load_wght_cmplt;
         end
@@ -289,7 +311,7 @@ begin
                     next_state=ifmap_filling_zero; 
                 end else begin
                     if (ifmap_ready) 
-                        next_state=idle;
+                        next_state=burst_clear;
                     else 
                         next_state=load_ifmap_cmplt;
                 end
@@ -321,9 +343,17 @@ begin
         offload_ofmap_cmplt:
         begin
             if (bus2ip_mst_cmplt)
-                next_state=idle;
+                next_state=burst_clear;
             else
                 next_state=offload_ofmap_cmplt;
+        end
+        burst_clear:
+        begin
+            if (ifmap_load || wght_load || ofmap_offload) begin
+                next_state=burst_clear;
+            end else begin
+                next_state=idle;
+            end
         end
         default: 
             next_state=idle;
@@ -350,6 +380,8 @@ D::::::::::::DDD   F::::::::FF                     CCC::::::::::::C oo::::::::::
 DDDDDDDDDDDDD      FFFFFFFFFFF                        CCCCCCCCCCCCC   ooooooooooo   mmmmmm   mmmmmm   mmmmmmbbbbbbbbbbbbbbbb   
 */
 
+assign ip2bus_mstwr_src_dsc_n = 1'b1;
+assign ip2bus_mstrd_dst_dsc_n = 1'b1;
 
 always @(current_state) 
 begin
@@ -417,15 +449,6 @@ DDDDDDDDDDDDD      FFFFFFFFFFF                 SSSSSSSSSSSSSSS       eeeeeeeeeee
                                                                                                 q:::::::q
                                                                                                 qqqqqqqqq
 */
-
-always @(posedge clk or posedge rst) 
-begin
-    if(rst)
-    begin
-        ip2bus_mstwr_src_dsc_n <= 1'b1;
-        ip2bus_mstrd_dst_dsc_n <= 1'b1;
-    end
-end
 
 always @(posedge clk or posedge rst) 
 begin
