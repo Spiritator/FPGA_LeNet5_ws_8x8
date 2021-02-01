@@ -241,3 +241,39 @@ with open('SDK_lib/ref_pic.hpp','w') as lib_file:
         lib_file.write(text_store)
                 
     lib_file.write('};')
+    
+
+#%% conv1 ofmap data prep
+
+import numpy as np
+
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=list(lenet_intermediate)
+ofmap=lenet_intermediate[1]
+
+ofmap_out_PE=np.transpose(ofmap,[1,0,2])
+ofmap_out_PE=np.reshape(ofmap_out_PE, [784,16])
+ofmap_out_PE=np.stack(np.split(ofmap_out_PE, 16/8, axis=-1))
+ofmap_out_PE=np.multiply(ofmap_out_PE,2**3)
+ofmap_out_PE=ofmap_out_PE.astype(np.int8)   
+
+
+#%% validate SDK export binary file
+
+import numpy as np
+
+filename='conv1_ofmap.bin'
+ofmap_bytes=list()
+with open('SDK_bin/'+filename,'rb') as bin_output_file:
+    byte=bin_output_file.read(1)
+    while byte:
+        ofmap_bytes.append(byte)
+        byte=bin_output_file.read(1)
+    
+ofmap_bytes=np.array(ofmap_bytes)
+ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
+ofmap_sdk=np.reshape(ofmap_sdk, [2,784,8])
+
+differ=np.subtract(ofmap_sdk,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+

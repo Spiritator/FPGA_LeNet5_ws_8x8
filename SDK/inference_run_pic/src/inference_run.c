@@ -257,6 +257,17 @@ int main()
     DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
     Xil_Out64(BURST_CTRL,DLA_cmd);
 
+    //======================================================
+    //         HALT HALT HALT HALT HALT HALT HALT
+    //======================================================
+    while(true)
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
+    }
+
+
     // check FSM comp and data
     xil_printf("Load Ifmap\n\r");
     while (!(FSM_comp==8 && FSM_data==0))
@@ -406,6 +417,15 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+
+    // // offload ofmap cmd
+    // DLA_cmd=burst_cmd(0,0,1,IFMAP_BASEADDR+(fmap_idx[0]+784)*wordbyte,784);
+    // Xil_Out64(BURST_CTRL,DLA_cmd);
+    // xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+    // // offload ofmap cmd lift
+    // DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+    // Xil_Out64(BURST_CTRL,DLA_cmd);
 
     //======================================================
     //         HALT HALT HALT HALT HALT HALT HALT
