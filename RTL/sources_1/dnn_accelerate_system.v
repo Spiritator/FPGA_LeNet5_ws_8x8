@@ -230,7 +230,7 @@ wire config_load,config_done,op_go,op_done,bias_write,write_halt;
 wire dataload_ready,tile_done;
 wire [3:0] FSM_comp;
 wire [3:0] FSM_data;
-wire wght_load,ifmap_load,ofmap_offload,padding,maxpooling;
+wire wght_load,ifmap_load,ofmap_offload;
 wire read_request,write_request,axi_rst;
 
 // data wire
@@ -249,27 +249,36 @@ wire [8*wd-1:0] ifmap_din,wght_din;
 wire [8*wd-1:0] ofmap_dout;
 
 // tile config
-wire psum_split_condense;
+wire psum_split_condense,padding,maxpooling,relu,tile_order_first,tile_order_last;
 wire [5:0] ifmapR,ifmapC,ofmapR,ofmapC,ifmapRpad,ifmapCpad;
 wire [2:0] kernelR,kernelC;
 wire [9:0] inchannel;
 wire [4:0] outchannel;
 wire [1:0] bias_len;
 
-wire psum_split_condense_val,padding_val,maxpooling_val;
-wire [1:0] bias_len_val;
-assign psum_split_condense_val=psum_split_condense;
-assign padding_val=padding;
-assign bias_len_val=bias_len;
-assign maxpooling_val=maxpooling;
+// reg [63:0] mst_vali;
 
+// always @(posedge m00_axi_aclk or posedge rst) 
+// begin
+//     if (rst) 
+//     begin
+//         mst_vali<=64'd0;
+//     end else begin
+//         if (!bus2ip_mstrd_eof_n) begin
+//             mst_vali<=bus2ip_mstrd_d;
+//         end else begin
+//             mst_vali<=mst_vali;
+//         end
+//     end
+// end
 
 // systolic PE array & BRAM
 accelerator_top accelerater_ws8x8_bram( .clk(m00_axi_aclk),.rst(rst),
                                         .ifmap_en(ifmap_en),.wght_en(wght_en),.ofmap_en(ofmap_en),.config_load(config_load),.config_done(config_done),
                                         .op_go(op_go),.ifmap_ready(ifmap_ready),.wght_ready(wght_ready),.op_done(op_done),
                                         .bias_write(bias_write),.ifmap_wen(ifmap_wen),.wght_wen(wght_wen),.ifmap_addrin(ifmap_addrin),.wght_addrin(wght_addrin),.ofmap_addrin(ofmap_addrin),.ifmap_din(ifmap_din),.wght_din(wght_din),
-                                        .psum_split_condense(psum_split_condense),.maxpooling(maxpooling),.ifmapR(ifmapRpad),.ifmapC(ifmapCpad),.ofmapR(ofmapR),.ofmapC(ofmapC),.kernelR(kernelR),.kernelC(kernelC),.inchannel(inchannel),.outchannel(outchannel),
+                                        .psum_split_condense(psum_split_condense),.maxpooling(maxpooling),.relu(relu),.tile_order_first(tile_order_first),.tile_order_last(tile_order_last),
+                                        .ifmapR(ifmapRpad),.ifmapC(ifmapCpad),.ofmapR(ofmapR),.ofmapC(ofmapC),.kernelR(kernelR),.kernelC(kernelC),.inchannel(inchannel),.outchannel(outchannel),
                                         .dataload_ready(dataload_ready),.tile_done(tile_done),.FSM(FSM_comp),.ofmap_dout(ofmap_dout));
 
 // AXI Lite Slave port
@@ -280,17 +289,10 @@ axi_lite_wrapper AXI_lite(  .s00_axi_aclk(s00_axi_aclk), .s00_axi_aresetn(s00_ax
 		                    .s00_axi_araddr(s00_axi_araddr), .s00_axi_arprot(s00_axi_arprot), .s00_axi_arvalid(s00_axi_arvalid), .s00_axi_arready(s00_axi_arready),
 		                    .s00_axi_rdata(s00_axi_rdata), .s00_axi_rresp(s00_axi_rresp), .s00_axi_rvalid(s00_axi_rvalid), .s00_axi_rready(s00_axi_rready),
                             .dataload_ready(dataload_ready), .tile_done(tile_done), .op_done(op_done), .AXI4_cmdack(bus2ip_mst_cmdack), .AXI4_error(AXI4_error), .FSM_comp(FSM_comp), .FSM_data(FSM_data),
-
-                            .psum_split_condense_val(psum_split_condense_val),
-		                    .padding_val(padding_val),
-		                    .bias_len_val(bias_len_val),
-		                    .maxpooling_val(maxpooling_val),
-                            
                             .rst(rst), .axi_rst(axi_rst), .config_load(config_load), .config_done(config_done), .op_go(op_go),
-                            .psum_split_condense(psum_split_condense), .padding(padding), .maxpooling(maxpooling), .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel), .bias_len(bias_len),
+                            .psum_split_condense(psum_split_condense), .padding(padding), .maxpooling(maxpooling), .relu(relu), .tile_order_first(tile_order_first), .tile_order_last(tile_order_last),
+                            .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel), .bias_len(bias_len),
                             .wght_load(wght_load), .ifmap_load(ifmap_load), .ofmap_offload(ofmap_offload), .ctrl_addr(ctrl_addr), .ctrl_mst_length(ctrl_mst_length)
-                            
-                            
                             );
 
 // data fetching controller

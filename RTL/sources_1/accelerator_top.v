@@ -22,7 +22,8 @@
 
 module accelerator_top(clk,rst,ifmap_en,wght_en,ofmap_en,config_load,config_done,op_go,ifmap_ready,wght_ready,op_done,
                        bias_write,ifmap_wen,wght_wen,ifmap_addrin,wght_addrin,ofmap_addrin,ifmap_din,wght_din,
-                       psum_split_condense,maxpooling,ifmapR,ifmapC,ofmapR,ofmapC,kernelR,kernelC,inchannel,outchannel,
+                       psum_split_condense,maxpooling,relu,tile_order_first,tile_order_last,
+                       ifmapR,ifmapC,ofmapR,ofmapC,kernelR,kernelC,inchannel,outchannel,
                        dataload_ready,tile_done,FSM,ofmap_dout);
     
 parameter wd=8,in=4,fi=3;
@@ -35,7 +36,7 @@ input [9:0] ofmap_addrin;
 input [8*wd-1:0] ifmap_din,wght_din;
 
 // tile config
-input psum_split_condense,maxpooling;
+input psum_split_condense,maxpooling,relu,tile_order_first,tile_order_last;
 input [5:0] ifmapR,ifmapC,ofmapR,ofmapC;
 input [2:0] kernelR,kernelC;
 input [9:0] inchannel;
@@ -91,7 +92,8 @@ bias_buffer_128bit bias_buf(.clka(clk),.ena(bias_en_a),.wea(bias_wen_a),.addra(b
 
 // control unit
 main_ctrl control_unit(.clk(clk), .rst(rst), .config_load(config_load), .config_done(config_done), .ifmap_ready(ifmap_ready), .wght_ready(wght_ready), .op_go(op_go), .op_done(op_done), .bias_write(bias_write),
-                       .psum_split_condense(psum_split_condense), .maxpooling(maxpooling), .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel),
+                       .psum_split_condense(psum_split_condense), .maxpooling(maxpooling), .tile_order_first(tile_order_first), .tile_order_last(tile_order_last),
+                       .ifmapR(ifmapR), .ifmapC(ifmapC), .ofmapR(ofmapR), .ofmapC(ofmapC), .kernelR(kernelR), .kernelC(kernelC), .inchannel(inchannel), .outchannel(outchannel),
                        .load_wght(load_wght), .data_ready(dataload_ready), .sum_in_bias(sum_in_bias), .tile_done(tile_done), .current_state(FSM),
                        .ofmap_en(ofmap_en), .ofmap_addrin(ofmap_addrin),
                        .ifmap_en_b(ifmap_en_b), .wght_en_b(wght_en_b), .ofmap_en_a(ofmap_en_a), .ofmap_en_b(ofmap_en_b), .bias_en_a(bias_en_a), .bias_en_b(bias_en_b),
@@ -144,14 +146,14 @@ assign bias_din_b=64'd0;
 assign ofmap_din_a=128'd0;
 
 // output truncate and ReLU unit
-activation_outtrunc relu_trunc0(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[ 2*wd-1:    0]),.ofmap(ofmap_dout[  wd-1:   0]));
-activation_outtrunc relu_trunc1(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[ 4*wd-1: 2*wd]),.ofmap(ofmap_dout[2*wd-1:  wd]));
-activation_outtrunc relu_trunc2(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[ 6*wd-1: 4*wd]),.ofmap(ofmap_dout[3*wd-1:2*wd]));
-activation_outtrunc relu_trunc3(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[ 8*wd-1: 6*wd]),.ofmap(ofmap_dout[4*wd-1:3*wd]));
-activation_outtrunc relu_trunc4(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[10*wd-1: 8*wd]),.ofmap(ofmap_dout[5*wd-1:4*wd]));
-activation_outtrunc relu_trunc5(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[12*wd-1:10*wd]),.ofmap(ofmap_dout[6*wd-1:5*wd]));
-activation_outtrunc relu_trunc6(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[14*wd-1:12*wd]),.ofmap(ofmap_dout[7*wd-1:6*wd]));
-activation_outtrunc relu_trunc7(.ofmap_en(ofmap_en),.psum_pxl(ofmap_dout_a[16*wd-1:14*wd]),.ofmap(ofmap_dout[8*wd-1:7*wd]));
+activation_outtrunc relu_trunc0(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[ 2*wd-1:    0]),.ofmap(ofmap_dout[  wd-1:   0]));
+activation_outtrunc relu_trunc1(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[ 4*wd-1: 2*wd]),.ofmap(ofmap_dout[2*wd-1:  wd]));
+activation_outtrunc relu_trunc2(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[ 6*wd-1: 4*wd]),.ofmap(ofmap_dout[3*wd-1:2*wd]));
+activation_outtrunc relu_trunc3(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[ 8*wd-1: 6*wd]),.ofmap(ofmap_dout[4*wd-1:3*wd]));
+activation_outtrunc relu_trunc4(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[10*wd-1: 8*wd]),.ofmap(ofmap_dout[5*wd-1:4*wd]));
+activation_outtrunc relu_trunc5(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[12*wd-1:10*wd]),.ofmap(ofmap_dout[6*wd-1:5*wd]));
+activation_outtrunc relu_trunc6(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[14*wd-1:12*wd]),.ofmap(ofmap_dout[7*wd-1:6*wd]));
+activation_outtrunc relu_trunc7(.ofmap_en(ofmap_en),.relu(relu),.psum_pxl(ofmap_dout_a[16*wd-1:14*wd]),.ofmap(ofmap_dout[8*wd-1:7*wd]));
 
 pooling_compare pool_unit(.clk(clk),.rst(rst),.poolwrite(ofmap_wen_b[0]),.ifmap_pool_in(ifmap_dout_b),.ofmap_pool_out(ofmap_pool_out));
 

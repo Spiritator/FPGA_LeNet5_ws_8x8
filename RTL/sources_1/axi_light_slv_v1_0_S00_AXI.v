@@ -23,10 +23,6 @@
 		input AXI4_error,
 		input [3:0] FSM_comp,
 		input [3:0] FSM_data,
-		input psum_split_condense_val,
-		input padding_val,
-		input [1:0] bias_len_val,
-		input maxpooling_val,
 
 		output rst,
 		output axi_rst,
@@ -37,6 +33,9 @@
 		output psum_split_condense,
 		output padding,
 		output maxpooling,
+		output relu,
+		output tile_order_first,
+		output tile_order_last,
 		output [5:0] ifmapR,
 		output [5:0] ifmapC,
 		output [5:0] ofmapR,
@@ -411,7 +410,7 @@
 	      // Address decoding for reading registers
 	      case ( axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
 		  	// status flags modification
-	        2'h0   : reg_data_out <= {46'd0,maxpooling_val,bias_len_val,padding_val,psum_split_condense_val,FSM_data,FSM_comp,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};
+	        2'h0   : reg_data_out <= {51'd0,FSM_data,FSM_comp,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};
 	        2'h1   : reg_data_out <= slv_reg1;
 	        2'h2   : reg_data_out <= slv_reg2;
 	        2'h3   : reg_data_out <= slv_reg3;
@@ -479,6 +478,9 @@
 	assign outchannel=slv_reg3[46:42];
 	assign bias_len=slv_reg3[48:47];
 	assign maxpooling=slv_reg3[49];
+	assign relu=slv_reg3[50];
+	assign tile_order_first=slv_reg3[51];
+	assign tile_order_last=slv_reg3[52];
 
 	// User logic ends
 

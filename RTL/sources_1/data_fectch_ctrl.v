@@ -208,24 +208,6 @@ assign ip2bus_mst_length = {ctrl_mst_length,3'b0};
 assign ip2bus_mst_lock = 1'b0;
 assign ip2bus_mst_reset = axi_rst;
 
-// AMB burst trigger
-// always @(posedge clk or posedge rst) 
-// begin
-//     if (rst) begin
-//        burst_trig<=1'b0; 
-//     end else begin
-//         if (bus2ip_mst_cmdack) begin
-//             burst_trig<=1'b1;
-//         end else begin
-//             if (ifmap_load || wght_load || ofmap_offload) begin
-//                 burst_trig<=burst_trig;
-//             end else begin
-//                 burst_trig<=1'b0;
-//             end
-//         end
-//     end
-// end
-
 /*
 FFFFFFFFFFFFFFFFFFFFFF   SSSSSSSSSSSSSSS MMMMMMMM               MMMMMMMM
 F::::::::::::::::::::F SS:::::::::::::::SM:::::::M             M:::::::M

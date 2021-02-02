@@ -21,7 +21,8 @@
 
 
 module main_ctrl(clk, rst, config_load, config_done, ifmap_ready, wght_ready, op_go, op_done, bias_write,
-                 psum_split_condense, maxpooling, ifmapR, ifmapC, ofmapR, ofmapC, kernelR, kernelC, inchannel, outchannel,
+                 psum_split_condense, maxpooling, tile_order_first, tile_order_last,
+                 ifmapR, ifmapC, ofmapR, ofmapC, kernelR, kernelC, inchannel, outchannel,
                  load_wght, data_ready, sum_in_bias, tile_done, current_state,
                  ofmap_en, ofmap_addrin,
                  ifmap_en_b, wght_en_b, ofmap_en_a, ofmap_en_b, bias_en_a, bias_en_b,
@@ -34,7 +35,7 @@ parameter idle=4'd0, load_tile_config=4'd1, load_data_b=4'd2, load_data=4'd3, PE
 
 input clk,rst, config_load, config_done, ifmap_ready, wght_ready, op_go, op_done, bias_write;
 // tile config
-input psum_split_condense,maxpooling;
+input psum_split_condense,maxpooling,tile_order_first,tile_order_last;
 input [5:0] ifmapR,ifmapC,ofmapR,ofmapC;
 input [2:0] kernelR,kernelC;
 input [9:0] inchannel;
@@ -128,7 +129,7 @@ assign slice_order_ovf={Ochidx==Ochref, Kcidx==Kcref, Kridx==Krref, Psplitidx==P
 assign ofmap_order_ovf={Ocidx==Ocref, Oridx==Orref};
 assign pool_order_ovf={ofmap_order_ovf,slice_order_ovf[0],slice_order_ovf[2:1]};
 
-assign sum_in_bias= ~((|Kcidx) | (|Kridx) | (|Psplitidx));
+assign sum_in_bias = tile_order_first ? ~((|Kcidx) | (|Kridx) | (|Psplitidx)) : 1'b0;
 assign ifmap_addr_b=slc_ifmap_addr_base+slc_ifmap_addr_mv;
 assign wght_addr_b=slc_wght_addr_base+slc_wght_addr_mv;
 assign bias_addr_b=Ochidx[0];
@@ -188,7 +189,7 @@ begin
         begin
             if (config_done) 
             begin
-                if (maxpooling) 
+                if (maxpooling || !tile_order_first) 
                     next_state=load_data; 
                 else
                     next_state=load_data_b; 
@@ -220,7 +221,10 @@ begin
         slice_check:
         begin
             if (tile_done) 
-                next_state=offload_ofmap;
+                if (tile_order_last)
+                    next_state=offload_ofmap;
+                else
+                    next_state=idle;
             else 
             begin
                 if (maxpooling) 
@@ -611,7 +615,7 @@ begin
                 wght_loaded<=1'b1;
             else 
                 wght_loaded<=wght_loaded;
-            if (!bias_write) 
+            if (!bias_write || !tile_order_first) 
                 bias_loaded<=1'b1;
             else 
                 bias_loaded<=bias_loaded;

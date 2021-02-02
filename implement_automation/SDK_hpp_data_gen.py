@@ -243,7 +243,7 @@ with open('SDK_lib/ref_pic.hpp','w') as lib_file:
     lib_file.write('};')
     
 
-#%% conv1 ofmap data prep
+#%% ofmap data prep conv1 
 
 import numpy as np
 
@@ -258,7 +258,7 @@ ofmap_out_PE=np.multiply(ofmap_out_PE,2**3)
 ofmap_out_PE=ofmap_out_PE.astype(np.int8)   
 
 
-#%% validate SDK export binary file
+#%% validate SDK export binary file conv1
 
 import numpy as np
 
@@ -273,6 +273,46 @@ with open('SDK_bin/'+filename,'rb') as bin_output_file:
 ofmap_bytes=np.array(ofmap_bytes)
 ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
 ofmap_sdk=np.reshape(ofmap_sdk, [2,784,8])
+
+differ=np.subtract(ofmap_sdk,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
+#%% ofmap data prep fc1 
+
+import numpy as np
+
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=list(lenet_intermediate)
+ofmap=lenet_intermediate[4]
+
+ofmap_out=np.transpose(ofmap,(2,1,0))
+ofmap_out=np.reshape(ofmap_out,[36,49])
+ofmap_out=np.transpose(ofmap_out)
+
+# 8x8 PE WS
+ofmap_out_PE=np.pad(ofmap_out,((0, 0), (0, 12)),'constant',constant_values=0)
+ofmap_out_PE=np.stack(np.split(ofmap_out_PE,48/16,axis=-1))
+ofmap_out_PE=np.stack(np.split(ofmap_out_PE,16/8,axis=-1),axis=1)
+ofmap_out_PE=np.multiply(ofmap_out_PE,2**3)
+ofmap_out_PE=ofmap_out_PE.astype(np.int32)
+ 
+
+
+#%% validate SDK export binary file conv1
+
+import numpy as np
+
+filename='fc1_ifmap.bin'
+ofmap_bytes=list()
+with open('SDK_bin/'+filename,'rb') as bin_output_file:
+    byte=bin_output_file.read(1)
+    while byte:
+        ofmap_bytes.append(byte)
+        byte=bin_output_file.read(1)
+    
+ofmap_bytes=np.array(ofmap_bytes)
+ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
+ofmap_sdk=np.reshape(ofmap_sdk, [3,2,49,8])
 
 differ=np.subtract(ofmap_sdk,ofmap_out_PE)
 print(np.sum(np.abs(differ)))

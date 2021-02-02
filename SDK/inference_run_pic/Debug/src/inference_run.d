@@ -12,6 +12,7 @@ src/inference_run.o src/inference_run.o: ../src/inference_run.c \
  ../../inference_run_pic_bsp/psu_cortexa53_0/include/xpseudo_asm.h \
  ../../inference_run_pic_bsp/psu_cortexa53_0/include/xreg_cortexa53.h \
  ../../inference_run_pic_bsp/psu_cortexa53_0/include/xpseudo_asm_gcc.h \
+ ../../inference_run_pic_bsp/psu_cortexa53_0/include/xil_cache.h \
  ../src/conv1_wght.hpp ../src/conv2_wght.hpp ../src/fc1_wght.hpp \
  ../src/fc2_wght.hpp ../src/ref_pic.hpp
 
@@ -42,6 +43,8 @@ src/inference_run.o src/inference_run.o: ../src/inference_run.c \
 ../../inference_run_pic_bsp/psu_cortexa53_0/include/xreg_cortexa53.h:
 
 ../../inference_run_pic_bsp/psu_cortexa53_0/include/xpseudo_asm_gcc.h:
+
+../../inference_run_pic_bsp/psu_cortexa53_0/include/xil_cache.h:
 
 ../src/conv1_wght.hpp:
 
