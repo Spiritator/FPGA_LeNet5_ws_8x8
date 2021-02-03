@@ -167,7 +167,7 @@ assign n_psum_slices=psum_split_condense ? npslccon : npslcinch;
 assign outchsplit=outchannel[4:3] + ( |outchannel[2:0] );
 assign Irref=ifmapRinner-1'b1;
 assign Icref=ifmapCinner-1'b1;
-assign offofref=ofmapsize-2'd2;
+assign offofref= ofmapsize<2 ? 10'd1 : ofmapsize-1'b1;
 assign padr=padding ? kernelR[2:1] : 2'd0;
 assign padc=padding ? kernelC[2:1] : 2'd0;
 assign Psplitref=n_psum_slices-1'b1;
@@ -407,95 +407,61 @@ begin
 end
 
 
-/*
-DDDDDDDDDDDDD      FFFFFFFFFFFFFFFFFFFFFF        SSSSSSSSSSSSSSS                                         
-D::::::::::::DDD   F::::::::::::::::::::F      SS:::::::::::::::S                                        
-D:::::::::::::::DD F::::::::::::::::::::F     S:::::SSSSSS::::::S                                        
-DDD:::::DDDDD:::::DFF::::::FFFFFFFFF::::F     S:::::S     SSSSSSS                                        
-  D:::::D    D:::::D F:::::F       FFFFFF     S:::::S                eeeeeeeeeeee       qqqqqqqqq   qqqqq
-  D:::::D     D:::::DF:::::F                  S:::::S              ee::::::::::::ee    q:::::::::qqq::::q
-  D:::::D     D:::::DF::::::FFFFFFFFFF         S::::SSSS          e::::::eeeee:::::ee q:::::::::::::::::q
-  D:::::D     D:::::DF:::::::::::::::F          SS::::::SSSSS    e::::::e     e:::::eq::::::qqqqq::::::qq
-  D:::::D     D:::::DF:::::::::::::::F            SSS::::::::SS  e:::::::eeeee::::::eq:::::q     q:::::q 
-  D:::::D     D:::::DF::::::FFFFFFFFFF               SSSSSS::::S e:::::::::::::::::e q:::::q     q:::::q 
-  D:::::D     D:::::DF:::::F                              S:::::Se::::::eeeeeeeeeee  q:::::q     q:::::q 
-  D:::::D    D:::::D F:::::F                              S:::::Se:::::::e           q::::::q    q:::::q 
-DDD:::::DDDDD:::::DFF:::::::FF                SSSSSSS     S:::::Se::::::::e          q:::::::qqqqq:::::q 
-D:::::::::::::::DD F::::::::FF                S::::::SSSSSS:::::S e::::::::eeeeeeee   q::::::::::::::::q 
-D::::::::::::DDD   F::::::::FF                S:::::::::::::::SS   ee:::::::::::::e    qq::::::::::::::q 
-DDDDDDDDDDDDD      FFFFFFFFFFF                 SSSSSSSSSSSSSSS       eeeeeeeeeeeeee      qqqqqqqq::::::q 
-                                                                                                 q:::::q 
-                                                                                                 q:::::q 
-                                                                                                q:::::::q
-                                                                                                q:::::::q
-                                                                                                q:::::::q
-                                                                                                qqqqqqqqq
-*/
 
-always @(posedge clk or posedge rst) 
+always @(current_state or burst_cnt or offofref) 
 begin
-    if (rst) 
-    begin
-        ip2bus_mstrd_dst_rdy_n<=1'b1;
-        ip2bus_mstwr_src_rdy_n<=1'b1;
-        ip2bus_mstwr_sof_n<=1'b1;
-        ip2bus_mstwr_eof_n<=1'b1;
-    end 
-    else 
-    begin
-        case (current_state)
-            idle: 
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b1;
-                ip2bus_mstwr_src_rdy_n<=1'b1;
-                ip2bus_mstwr_sof_n<=1'b1;
-                ip2bus_mstwr_eof_n<=1'b1;
-            end
-            load_wght_req,load_wght_burst,load_ifmap_req,load_ifmap_burst:
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b0;
-                ip2bus_mstwr_src_rdy_n<=1'b1;
-                ip2bus_mstwr_sof_n<=1'b1;
-                ip2bus_mstwr_eof_n<=1'b1;
-            end
-            load_wght_cmplt,load_ifmap_cmplt,ifmap_filling_zero,offload_ofmap_cmplt:
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b1;
-                ip2bus_mstwr_src_rdy_n<=1'b1;
-                ip2bus_mstwr_sof_n<=1'b1;
-                ip2bus_mstwr_eof_n<=1'b1;
-            end
-            offload_ofmap_req:
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b1;
-                ip2bus_mstwr_src_rdy_n<=1'b0;
-                ip2bus_mstwr_sof_n<=1'b0;
-                ip2bus_mstwr_eof_n<=1'b1;
-            end
-            offload_ofmap_burst:
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b1;
-                ip2bus_mstwr_src_rdy_n<=1'b0;
+    case (current_state)
+        idle: 
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b1;
+            ip2bus_mstwr_src_rdy_n=1'b1;
+            ip2bus_mstwr_sof_n=1'b1;
+            ip2bus_mstwr_eof_n=1'b1;
+        end
+        load_wght_req,load_wght_burst,load_ifmap_req,load_ifmap_burst:
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b0;
+            ip2bus_mstwr_src_rdy_n=1'b1;
+            ip2bus_mstwr_sof_n=1'b1;
+            ip2bus_mstwr_eof_n=1'b1;
+        end
+        load_wght_cmplt,load_ifmap_cmplt,ifmap_filling_zero,offload_ofmap_cmplt:
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b1;
+            ip2bus_mstwr_src_rdy_n=1'b1;
+            ip2bus_mstwr_sof_n=1'b1;
+            ip2bus_mstwr_eof_n=1'b1;
+        end
+        offload_ofmap_req:
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b1;
+            ip2bus_mstwr_src_rdy_n=1'b0;
+            ip2bus_mstwr_sof_n=1'b0;
+            ip2bus_mstwr_eof_n=1'b1;
+        end
+        offload_ofmap_burst:
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b1;
+            ip2bus_mstwr_src_rdy_n=1'b0;
 
-                if (!bus2ip_mstwr_dst_rdy_n) 
-                    ip2bus_mstwr_sof_n<=1'b1;
-                else 
-                    ip2bus_mstwr_sof_n<=ip2bus_mstwr_sof_n;
+            if (burst_cnt==10'd0) 
+                ip2bus_mstwr_sof_n=1'b0;
+            else 
+                ip2bus_mstwr_sof_n=1'b1;
 
-                if (burst_cnt==offofref)
-                    ip2bus_mstwr_eof_n<=1'b0;
-                else
-                    ip2bus_mstwr_eof_n<=ip2bus_mstwr_eof_n;
-            end
-            default: 
-            begin
-                ip2bus_mstrd_dst_rdy_n<=1'b1;
-                ip2bus_mstwr_src_rdy_n<=1'b1;
-                ip2bus_mstwr_sof_n<=1'b1;
-                ip2bus_mstwr_eof_n<=1'b1;
-            end
-        endcase
-    end
+            if (burst_cnt==offofref)
+                ip2bus_mstwr_eof_n=1'b0;
+            else
+                ip2bus_mstwr_eof_n=1'b1;
+        end
+        default: 
+        begin
+            ip2bus_mstrd_dst_rdy_n=1'b1;
+            ip2bus_mstwr_src_rdy_n=1'b1;
+            ip2bus_mstwr_sof_n=1'b1;
+            ip2bus_mstwr_eof_n=1'b1;
+        end
+    endcase
 end
 
 

@@ -175,7 +175,7 @@ begin
         current_state <= next_state; 
 end
 
-always @(current_state or config_load or config_done or bias_write or data_ready or op_go or tile_done or check_done or wght_shift_done or slice_done or op_done or maxpooling) 
+always @(current_state or config_load or config_done or bias_write or data_ready or op_go or tile_done or check_done or wght_shift_done or slice_done or op_done or maxpooling or tile_order_first or tile_order_last) 
 begin
     case (current_state)
         idle: 
