@@ -120,17 +120,17 @@ with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
     bias=weight_f['dense_1']['dense_1/bias:0'][()]
 
 kernel_in=np.reshape(kernel,(7,7,36,128))
-kernel_in=np.transpose(kernel_in,[1,0,2,3])
-kernel_in=np.reshape(kernel_in,[7*7*36,128])
 
-kernel_in_PE=np.pad(kernel_in,((0, 12), (0, 0)),'constant',constant_values=0)
+kernel_in_PE=np.pad(kernel_in,((0, 0), (0, 0), (0, 4), (0, 0)),'constant',constant_values=0)
+kernel_in_PE=np.transpose(kernel_in_PE,[1,0,2,3])
+kernel_in_PE=np.stack(np.split(kernel_in_PE,40/8,axis=2))
+kernel_in_PE=np.reshape(kernel_in_PE, [5*7*7,8,128])
+
 kernel_in_PE=np.stack(np.split(kernel_in_PE,128/8,axis=-1))
-kernel_in_PE=np.stack(np.split(kernel_in_PE,2,axis=1),axis=1)
-kernel_in_PE=np.stack(np.split(kernel_in_PE,888/8,axis=2),axis=2)
 kernel_in_PE=np.multiply(kernel_in_PE,2**3)
 kernel_in_PE=np.round(kernel_in_PE)
 kernel_in_PE=kernel_in_PE.astype(np.int8)
-# [slice_outchannel, slice_inchannel, slice_kernel, PE_y, PE_x]
+# [slice_outchannel, slice_inchannel, PE_y, PE_x]
 bias_in_PE=np.stack(np.split(bias,128/8))
 bias_in_PE=np.multiply(bias_in_PE,2**3)
 bias_in_PE=np.round(bias_in_PE)
@@ -140,7 +140,7 @@ bias_in_PE=bias_in_PE.astype(np.int8)
 
 
 with open('SDK_lib/fc1_wght.hpp','w') as lib_file:
-    lib_file.write('volatile unsigned long long fc1_wght[28432] = {\n')
+    lib_file.write('volatile unsigned long long fc1_wght[31376] = {\n')
     
     for ochsplit in range(16):
         text_store='0x'
@@ -148,13 +148,12 @@ with open('SDK_lib/fc1_wght.hpp','w') as lib_file:
         text_store+=' ,\n'
         lib_file.write(text_store)
         
-        for ichsplit in range(2):
-            for kslc in range(111):
-                for PEy in reversed(range(8)):
-                    text_store='0x'
-                    text_store+=bytes(kernel_in_PE[ochsplit,ichsplit,kslc,PEy,::-1]).hex()
-                    text_store+=' ,\n'
-                    lib_file.write(text_store)
+        for ichsplit in range(245):
+            for PEy in reversed(range(8)):
+                text_store='0x'
+                text_store+=bytes(kernel_in_PE[ochsplit,ichsplit,PEy,::-1]).hex()
+                text_store+=' ,\n'
+                lib_file.write(text_store)
                 
     lib_file.write('};')
 

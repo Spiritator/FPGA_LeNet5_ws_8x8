@@ -3,7 +3,7 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2021/01/24 02:07:44
+// Create Date: 2021/02/03 13:50:41
 // Design Name: 
 // Module Name: dnn_accelerate_system_tb
 // Project Name: 
@@ -100,22 +100,23 @@ module dnn_accelerate_system_tb(
     reg s00_axi_rready;
 
 	// Memory
-    reg [63:0] L1_ifmap_bus[0:1023];
-    reg [63:0] L1_wght_bus[0:40];
-    reg [63:0] L1_ofmap_bus[0:783];
-    reg [63:0] L1_pool_ifmap_bus[0:783];
-    reg [63:0] L1_pool_ofmap_bus[0:195];
+    reg [63:0] input_pic_bus[0:1023];
+    reg [63:0] L1_wght_bus[0:81];
+    reg [63:0] L1_ofmap_bus[0:1567];
     reg [63:0] L2_ifmap_bus[0:391];
-    reg [63:0] L2_wght_bus[0:801];
-    reg [63:0] L2_ofmap_bus[0:391];
-    reg [63:0] L2_pool_ifmap_bus[0:391];
-    reg [63:0] L2_pool_ofmap_bus[0:97];
+    reg [63:0] L2_wght_bus[0:2405];
+    reg [63:0] L2_ofmap_bus[0:1175];
     reg [63:0] FC1_ifmap_bus[0:293];
+    reg [63:0] FC1_wght_bus[0:31376];
+    reg [63:0] FC1_ofmap_bus[0:16];
+    reg [63:0] FC2_wght_bus[0:257];
+    reg [63:0] FC2_ofmap_bus[0:2];
 
     reg [7:0] bst_len_list[0:31];
 
     // Iterator
-    integer i,transtotal,bstlenidxassign,bstlenidxcompare;
+    integer i, transtotal, bstlenidxassign, bstlenidxcompare;
+    integer offset, fc1_ochidx;
 
     // Instantiate the Unit Under Test (UUT)
     dnn_accelerate_system uut ( 
@@ -281,10 +282,10 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
 */                                    
 
 
-        $readmemb("conv1_ifmap_tile0.mem",L1_ifmap_bus);
-        $readmemb("conv1_wght_tile0.mem",L1_wght_bus);
+        $readmemh("input_pic.mem",input_pic_bus);
+        $readmemh("conv1_wght.mem",L1_wght_bus);
 
-        for ( i=0 ; i<784 ; i=i+1) 
+        for ( i=0 ; i<1568 ; i=i+1) 
         begin
             L1_ofmap_bus[i]=64'd0;
         end
@@ -424,7 +425,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read weight
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==41)) 
         begin
@@ -443,7 +444,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready && m00_axi_rvalid) begin
-                m00_axi_rdata=L1_wght_bus[transtotal];
+                m00_axi_rdata=L1_wght_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -530,7 +531,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==1024) )
         begin
@@ -549,7 +550,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L1_ifmap_bus[transtotal];
+                m00_axi_rdata=input_pic_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -682,7 +683,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==784))
         begin
@@ -701,7 +702,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_wvalid) begin
-                L1_ofmap_bus[transtotal]=m00_axi_wdata;
+                L1_ofmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -722,9 +723,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-
-        #10 $writememb("conv1_ofmap_tile0.mem",L1_ofmap_bus);
 
 
 
@@ -763,8 +761,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
       T:::::::::T      i::::::il::::::l  ee:::::::::::::e       1::::::::::1
       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeee       111111111111
 */
-
-        $readmemb("conv1_wght_tile1.mem",L1_wght_bus);
 
         //===========================
         // Load Config cmd
@@ -880,7 +876,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read weight
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=41;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==41)) 
         begin
@@ -899,7 +895,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready && m00_axi_rvalid) begin
-                m00_axi_rdata=L1_wght_bus[transtotal];
+                m00_axi_rdata=L1_wght_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -986,7 +982,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==1024) )
         begin
@@ -1005,7 +1001,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L1_ifmap_bus[transtotal];
+                m00_axi_rdata=input_pic_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -1139,7 +1135,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=784;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==784))
         begin
@@ -1158,7 +1154,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_wvalid) begin
-                L1_ofmap_bus[transtotal]=m00_axi_wdata;
+                L1_ofmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -1179,9 +1175,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10 $writememb("conv1_ofmap_tile1.mem",L1_ofmap_bus);
-
 
 
 /*                                    
@@ -1220,12 +1213,9 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeee            000000000     
 */                                    
 
-
-        $readmemb("conv1_ofmap_tile0.mem",L1_pool_ifmap_bus);
-
-        for ( i=0 ; i<196 ; i=i+1) 
+        for ( i=0 ; i<392 ; i=i+1) 
         begin
-            L1_pool_ofmap_bus[i]=64'd0;
+            L2_ifmap_bus[i]=64'd0;
         end
 
         //===========================
@@ -1362,7 +1352,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==784) )
         begin
@@ -1381,7 +1371,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L1_pool_ifmap_bus[transtotal];
+                m00_axi_rdata=L1_ofmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -1514,7 +1504,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==196))
         begin
@@ -1533,7 +1523,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_wvalid) begin
-                L1_pool_ofmap_bus[transtotal]=m00_axi_wdata;
+                L2_ifmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -1554,12 +1544,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10
-        for ( i=0 ; i<196 ; i=i+1) 
-        begin
-            L2_ifmap_bus[i]=L1_pool_ofmap_bus[i];
-        end
 
 
 /*                                    
@@ -1597,13 +1581,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
       T:::::::::T      i::::::il::::::l  ee:::::::::::::e       1::::::::::1
       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeee       111111111111
 */
-
-        $readmemb("conv1_ofmap_tile1.mem",L1_pool_ifmap_bus);
-
-        for ( i=0 ; i<196 ; i=i+1) 
-        begin
-            L1_pool_ofmap_bus[i]=64'd0;
-        end
 
         //===========================
         // Load Config cmd
@@ -1719,7 +1696,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=784;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==784) )
         begin
@@ -1738,7 +1715,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L1_pool_ifmap_bus[transtotal];
+                m00_axi_rdata=L1_ofmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -1871,7 +1848,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=196;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==196))
         begin
@@ -1890,7 +1867,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_wvalid) begin
-                L1_pool_ofmap_bus[transtotal]=m00_axi_wdata;
+                L2_ifmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -1911,15 +1888,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10
-        for ( i=0 ; i<196 ; i=i+1) 
-        begin
-            L2_ifmap_bus[i+196]=L1_pool_ofmap_bus[i];
-        end
-
-        $writememb("conv2_ifmap_tile0.mem",L2_ifmap_bus);
-
 
 
 /*      
@@ -1959,10 +1927,9 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
 */                                                                                   
 
 
-        $readmemb("conv2_ifmap_tile0.mem",L2_ifmap_bus);
-        $readmemb("conv2_wght_tile0.mem",L2_wght_bus);
+        $readmemh("conv2_wght.mem",L2_wght_bus);
 
-        for ( i=0 ; i<392 ; i=i+1) 
+        for ( i=0 ; i<1176 ; i=i+1) 
         begin
             L2_ofmap_bus[i]=64'd0;
         end
@@ -2102,7 +2069,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read weight
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==802)) 
         begin
@@ -2121,7 +2088,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready && m00_axi_rvalid) begin
-                m00_axi_rdata=L2_wght_bus[transtotal];
+                m00_axi_rdata=L2_wght_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -2208,7 +2175,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -2227,7 +2194,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ifmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -2360,7 +2327,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==392))
         begin
@@ -2379,7 +2346,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_wvalid) begin
-                L2_ofmap_bus[transtotal]=m00_axi_wdata;
+                L2_ofmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -2400,9 +2367,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10 $writememb("conv2_ofmap_tile0.mem",L2_ofmap_bus);
-
 
 
 /*                                                                            
@@ -2440,9 +2404,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
       T:::::::::T      i::::::il::::::l  ee:::::::::::::e       1::::::::::1
       TTTTTTTTTTT      iiiiiiiillllllll    eeeeeeeeeeeeee       111111111111
 */                                                                            
-
-
-        $readmemb("conv2_wght_tile1.mem",L2_wght_bus);
 
         //===========================
         // Load Config cmd
@@ -2559,7 +2520,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read weight
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=802;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==802)) 
         begin
@@ -2578,7 +2539,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready && m00_axi_rvalid) begin
-                m00_axi_rdata=L2_wght_bus[transtotal];
+                m00_axi_rdata=L2_wght_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -2665,7 +2626,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -2684,7 +2645,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ifmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -2817,7 +2778,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=392;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==392))
         begin
@@ -2836,7 +2797,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_wvalid) begin
-                L2_ofmap_bus[transtotal]=m00_axi_wdata;
+                L2_ofmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -2857,9 +2818,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10 $writememb("conv2_ofmap_tile1.mem",L2_ofmap_bus);
-
 
 
 /*                                                                                    
@@ -2899,8 +2857,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
 */                                                                                    
 
 
-        $readmemb("conv2_wght_tile2.mem",L2_wght_bus);
-
         //===========================
         // Load Config cmd
         //===========================
@@ -3016,7 +2972,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         //======================
         // AXI MSB read weight
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=1604;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==802)) 
         begin
@@ -3035,7 +2991,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
             end
 
             if (m00_axi_rready && m00_axi_rvalid) begin
-                m00_axi_rdata=L2_wght_bus[transtotal];
+                m00_axi_rdata=L2_wght_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -3122,7 +3078,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -3141,7 +3097,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ifmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -3274,7 +3230,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=784;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==392))
         begin
@@ -3293,7 +3249,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
             end
 
             if (m00_axi_wvalid) begin
-                L2_ofmap_bus[transtotal]=m00_axi_wdata;
+                L2_ofmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -3314,8 +3270,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10 $writememb("conv2_ofmap_tile2.mem",L2_ofmap_bus);
 
 
 /*      
@@ -3355,11 +3309,9 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
 */                                                                                   
 
 
-        $readmemb("conv2_ofmap_tile0.mem",L2_pool_ifmap_bus);
-
-        for ( i=0 ; i<98 ; i=i+1) 
+        for ( i=0 ; i<294 ; i=i+1) 
         begin
-            L2_pool_ofmap_bus[i]=64'd0;
+            FC1_ifmap_bus[i]=64'd0;
         end
 
         //===========================
@@ -3496,7 +3448,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=784;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -3515,7 +3467,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_pool_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ofmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -3648,7 +3600,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==98))
         begin
@@ -3667,7 +3619,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
             end
 
             if (m00_axi_wvalid) begin
-                L2_pool_ofmap_bus[transtotal]=m00_axi_wdata;
+                FC1_ifmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -3688,12 +3640,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee         0::::::0   0::::
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10
-        for ( i=0 ; i<98 ; i=i+1) 
-        begin
-            FC1_ifmap_bus[i]=L2_pool_ofmap_bus[i];
-        end
 
 
 
@@ -3734,8 +3680,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
 */                                                                            
 
 
-        $readmemb("conv2_ofmap_tile1.mem",L2_pool_ifmap_bus);
-
         //===========================
         // Load Config cmd
         //===========================
@@ -3850,7 +3794,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=392;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -3869,7 +3813,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_pool_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ofmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -4002,7 +3946,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=98;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==98))
         begin
@@ -4021,7 +3965,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
             end
 
             if (m00_axi_wvalid) begin
-                L2_pool_ofmap_bus[transtotal]=m00_axi_wdata;
+                FC1_ifmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -4042,12 +3986,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee            1::::1
         end
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
-
-        #10
-        for ( i=0 ; i<98 ; i=i+1) 
-        begin
-            FC1_ifmap_bus[i+98]=L2_pool_ofmap_bus[i];
-        end
 
 
 /*                                                                                    
@@ -4087,8 +4025,6 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
 */                                                                                    
 
 
-        $readmemb("conv2_ofmap_tile2.mem",L2_pool_ifmap_bus);
-
         //===========================
         // Load Config cmd
         //===========================
@@ -4203,7 +4139,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         //======================
         // AXI MSB read ifmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=784;
         m00_axi_arready = 1'b1;
         while (!(!m00_axi_rready && transtotal==392) )
         begin
@@ -4222,7 +4158,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
             end
 
             if (m00_axi_rready) begin
-                m00_axi_rdata=L2_pool_ifmap_bus[transtotal];
+                m00_axi_rdata=L2_ofmap_bus[transtotal+offset];
                 
                 if (i==bst_len_list[bstlenidxcompare]) begin
                     m00_axi_rlast=1'b1;
@@ -4355,7 +4291,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         //======================
         // AXI MSB write ofmap
         //======================
-        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0;
+        i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=196;
         m00_axi_awready=1'b1;
         while (!(!m00_axi_wvalid && transtotal==98))
         begin
@@ -4374,7 +4310,7 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
             end
 
             if (m00_axi_wvalid) begin
-                L2_pool_ofmap_bus[transtotal]=m00_axi_wdata;
+                FC1_ifmap_bus[transtotal+offset]=m00_axi_wdata;
                 if (m00_axi_wlast) 
                     m00_axi_bvalid=1'b1;
                 else
@@ -4396,13 +4332,940 @@ TTTTTT  T:::::T  TTTTTTiiiiiii  l::::l     eeeeeeeeeeee                     2:::
         s00_axi_arvalid=1'b0; 
         #10 s00_axi_rready=1'b0;
 
-        #10
-        for ( i=0 ; i<98 ; i=i+1) 
+
+
+
+
+/*
+FFFFFFFFFFFFFFFFFFFFFF       CCCCCCCCCCCCC       1111111               
+F::::::::::::::::::::F    CCC::::::::::::C      1::::::1               
+F::::::::::::::::::::F  CC:::::::::::::::C     1:::::::1               
+FF::::::FFFFFFFFF::::F C:::::CCCCCCCC::::C     111:::::1               
+  F:::::F       FFFFFFC:::::C       CCCCCC        1::::1               
+  F:::::F            C:::::C                      1::::1               
+  F::::::FFFFFFFFFF  C:::::C                      1::::1               
+  F:::::::::::::::F  C:::::C                      1::::l               
+  F:::::::::::::::F  C:::::C                      1::::l               
+  F::::::FFFFFFFFFF  C:::::C                      1::::l               
+  F:::::F            C:::::C                      1::::l               
+  F:::::F             C:::::C       CCCCCC        1::::l               
+FF:::::::FF            C:::::CCCCCCCC::::C     111::::::111            
+F::::::::FF             CC:::::::::::::::C     1::::::::::1            
+F::::::::FF               CCC::::::::::::C     1::::::::::1            
+FFFFFFFFFFF                  CCCCCCCCCCCCC     111111111111            
+
+IIIIIIIIII       tttt                                                  
+I::::::::I    ttt:::t                                                  
+I::::::::I    t:::::t                                                  
+II::::::II    t:::::t                                                  
+  I::::Ittttttt:::::ttttttt        eeeeeeeeeeee    rrrrr   rrrrrrrrr   
+  I::::It:::::::::::::::::t      ee::::::::::::ee  r::::rrr:::::::::r  
+  I::::It:::::::::::::::::t     e::::::eeeee:::::eer:::::::::::::::::r 
+  I::::Itttttt:::::::tttttt    e::::::e     e:::::err::::::rrrrr::::::r
+  I::::I      t:::::t          e:::::::eeeee::::::e r:::::r     r:::::r
+  I::::I      t:::::t          e:::::::::::::::::e  r:::::r     rrrrrrr
+  I::::I      t:::::t          e::::::eeeeeeeeeee   r:::::r            
+  I::::I      t:::::t    tttttte:::::::e            r:::::r            
+II::::::II    t::::::tttt:::::te::::::::e           r:::::r            
+I::::::::I    tt::::::::::::::t e::::::::eeeeeeee   r:::::r            
+I::::::::I      tt:::::::::::tt  ee:::::::::::::e   r:::::r            
+IIIIIIIIII        ttttttttttt      eeeeeeeeeeeeee   rrrrrrr            
+*/
+
+
+        // FC1 file load
+        $readmemh("fc1_wght.mem",FC1_wght_bus);
+
+        for ( i=0 ; i<17 ; i=i+1) 
         begin
-            FC1_ifmap_bus[i+196]=L2_pool_ofmap_bus[i];
+            FC1_ofmap_bus[i]=64'd0;
         end
 
-        $writememb("FC1_ifmap_tile0.mem",FC1_ifmap_bus);
+        //===================================
+        // Iterate Through 16 Output Channel
+        //===================================
+        for (fc1_ochidx = 0 ; fc1_ochidx<16 ; fc1_ochidx=fc1_ochidx+1) 
+        begin
+            
+
+
+/*
+FFFFFFFFFFFFFFFFFFFFFF       CCCCCCCCCCCCC       1111111                                               
+F::::::::::::::::::::F    CCC::::::::::::C      1::::::1                                               
+F::::::::::::::::::::F  CC:::::::::::::::C     1:::::::1                                               
+FF::::::FFFFFFFFF::::F C:::::CCCCCCCC::::C     111:::::1                                               
+  F:::::F       FFFFFFC:::::C       CCCCCC        1::::1                                               
+  F:::::F            C:::::C                      1::::1                                               
+  F::::::FFFFFFFFFF  C:::::C                      1::::1                                               
+  F:::::::::::::::F  C:::::C                      1::::l                                               
+  F:::::::::::::::F  C:::::C                      1::::l                                               
+  F::::::FFFFFFFFFF  C:::::C                      1::::l                                               
+  F:::::F            C:::::C                      1::::l                                               
+  F:::::F             C:::::C       CCCCCC        1::::l                                               
+FF:::::::FF            C:::::CCCCCCCC::::C     111::::::111                                            
+F::::::::FF             CC:::::::::::::::C     1::::::::::1                                            
+F::::::::FF               CCC::::::::::::C     1::::::::::1                                            
+FFFFFFFFFFF                  CCCCCCCCCCCCC     111111111111                                            
+
+IIIIIIIIII                                   hhhhhhh                                 AAA               
+I::::::::I                                   h:::::h                                A:::A              
+I::::::::I                                   h:::::h                               A:::::A             
+II::::::II                                   h:::::h                              A:::::::A            
+  I::::Innnn  nnnnnnnn        cccccccccccccccch::::h hhhhh                       A:::::::::A           
+  I::::In:::nn::::::::nn    cc:::::::::::::::ch::::hh:::::hhh                   A:::::A:::::A          
+  I::::In::::::::::::::nn  c:::::::::::::::::ch::::::::::::::hh                A:::::A A:::::A         
+  I::::Inn:::::::::::::::nc:::::::cccccc:::::ch:::::::hhh::::::h              A:::::A   A:::::A        
+  I::::I  n:::::nnnn:::::nc::::::c     ccccccch::::::h   h::::::h            A:::::A     A:::::A       
+  I::::I  n::::n    n::::nc:::::c             h:::::h     h:::::h           A:::::AAAAAAAAA:::::A      
+  I::::I  n::::n    n::::nc:::::c             h:::::h     h:::::h          A:::::::::::::::::::::A     
+  I::::I  n::::n    n::::nc::::::c     ccccccch:::::h     h:::::h         A:::::AAAAAAAAAAAAA:::::A    
+II::::::IIn::::n    n::::nc:::::::cccccc:::::ch:::::h     h:::::h        A:::::A             A:::::A   
+I::::::::In::::n    n::::n c:::::::::::::::::ch:::::h     h:::::h       A:::::A               A:::::A  
+I::::::::In::::n    n::::n  cc:::::::::::::::ch:::::h     h:::::h      A:::::A                 A:::::A 
+IIIIIIIIIInnnnnn    nnnnnn    cccccccccccccccchhhhhhh     hhhhhhh     AAAAAAA                   AAAAAAA
+*/
+
+
+            //===========================
+            // Load Config cmd
+            //===========================
+
+            // load tile config
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1}; // config_load
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config assignment
+            #10 s00_axi_awaddr={2'd3,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{null ,tlfr,tlls,relu,mpool,biasl,outch,inchannl,krnlC,krnlR,ofmpC,ofmpR,ifmpC,ifmpR, pad ,psum_split_condense}
+                s00_axi_wdata={11'd0,1'b1,1'b0,1'b0, 1'b0, 2'd1, 5'd8, 10'd984, 3'd1, 3'd1, 6'd1, 6'd1, 6'd1, 6'd1,1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config done
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0}; // config_load=0, config_done=1
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config done = 0
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0}; // config_done=0
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            //===========================
+            // AXI Lite read weight cmd
+            //===========================
+
+            // load weight
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null, mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0,11'd985, 13'd0, 1'b0, 1'b0, 1'b1};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check AXI4_cmdack
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[3]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // load weight command lift
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b0, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+
+            //======================
+            // AXI MSB read weight
+            //======================
+            i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=fc1_ochidx*1961;
+            m00_axi_arready = 1'b1;
+            while (!(!m00_axi_rready && transtotal==985)) 
+            begin
+                if (m00_axi_arvalid) begin
+                    bst_len_list[bstlenidxassign]=m00_axi_arlen;
+                    #10 
+                    if (bstlenidxassign==31)
+                        bstlenidxassign=0;
+                    else
+                        bstlenidxassign=bstlenidxassign+1;
+
+                    m00_axi_arready=1'b0;
+                    m00_axi_rvalid=1'b1;
+                end else begin
+                    #10 m00_axi_arready=1'b1;
+                end
+
+                if (m00_axi_rready && m00_axi_rvalid) begin
+                    m00_axi_rdata=FC1_wght_bus[transtotal+offset];
+                    
+                    if (i==bst_len_list[bstlenidxcompare]) begin
+                        m00_axi_rlast=1'b1;
+                        i=0;
+                        if (bstlenidxcompare==31) 
+                            bstlenidxcompare=0;
+                        else 
+                            bstlenidxcompare=bstlenidxcompare+1;
+                    end else begin
+                        m00_axi_rlast=1'b0;
+                        i=i+1;
+                    end
+
+                    transtotal=transtotal+1;
+                end else begin
+                    m00_axi_rlast=1'b0;
+                end
+            end
+            m00_axi_arready = 1'b0; m00_axi_rvalid = 1'b0; m00_axi_rdata = 64'd0; m00_axi_rlast = 1'b0; m00_axi_awready = 1'b0; m00_axi_wready = 1'b0; m00_axi_bvalid = 1'b0;
+
+
+            // check FSM comp and data
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[8:5]==4'd3 && s00_axi_rdata[12:9]==4'd0))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            //===========================
+            // AXI Lite read ifmap cmd
+            //===========================
+
+            // load ifmap
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,  mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd123, 13'd0, 1'b0, 1'b1, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check AXI4_cmdack
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[3]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // load ifmap command lift
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b0, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            //======================
+            // AXI MSB read ifmap
+            //======================
+            i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=0;
+            m00_axi_arready = 1'b1;
+            while (!(!m00_axi_rready && transtotal==123) )
+            begin
+                if (m00_axi_arvalid) begin
+                    bst_len_list[bstlenidxassign]=m00_axi_arlen;
+                    #10
+                    if (bstlenidxassign==31)
+                        bstlenidxassign=0;
+                    else
+                        bstlenidxassign=bstlenidxassign+1;
+
+                    m00_axi_arready=1'b0;
+                    m00_axi_rvalid=1'b1;
+                end else begin
+                    #10 m00_axi_arready=1'b1;
+                end
+
+                if (m00_axi_rready) begin
+                    m00_axi_rdata=FC1_ifmap_bus[transtotal+offset];
+                    
+                    if (i==bst_len_list[bstlenidxcompare]) begin
+                        m00_axi_rlast=1'b1;
+                        i=0;
+                        if (bstlenidxcompare==31) 
+                            bstlenidxcompare=0;
+                        else 
+                            bstlenidxcompare=bstlenidxcompare+1;
+                    end else begin
+                        m00_axi_rlast=1'b0;
+                        i=i+1;
+                    end
+
+                    transtotal=transtotal+1;
+                end else begin
+                    m00_axi_rlast=1'b0;
+                end
+            end
+            m00_axi_arready = 1'b0; m00_axi_rvalid = 1'b0; m00_axi_rdata = 64'd0; m00_axi_rlast = 1'b0; m00_axi_awready = 1'b0; m00_axi_wready = 1'b0; m00_axi_bvalid = 1'b0;
+
+            // check FSM comp and data
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[8:5]==4'd8 && s00_axi_rdata[12:9]==4'd0))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            //===========================
+            // AXI Lite operation go cmd
+            //===========================
+            // op_go
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0}; // op_go=1
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check tile_done
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[1]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // op_go cmd lift
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0}; // op_go=0
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+
+
+/*
+FFFFFFFFFFFFFFFFFFFFFF       CCCCCCCCCCCCC       1111111                                  
+F::::::::::::::::::::F    CCC::::::::::::C      1::::::1                                  
+F::::::::::::::::::::F  CC:::::::::::::::C     1:::::::1                                  
+FF::::::FFFFFFFFF::::F C:::::CCCCCCCC::::C     111:::::1                                  
+  F:::::F       FFFFFFC:::::C       CCCCCC        1::::1                                  
+  F:::::F            C:::::C                      1::::1                                  
+  F::::::FFFFFFFFFF  C:::::C                      1::::1                                  
+  F:::::::::::::::F  C:::::C                      1::::l                                  
+  F:::::::::::::::F  C:::::C                      1::::l                                  
+  F::::::FFFFFFFFFF  C:::::C                      1::::l                                  
+  F:::::F            C:::::C                      1::::l                                  
+  F:::::F             C:::::C       CCCCCC        1::::l                                  
+FF:::::::FF            C:::::CCCCCCCC::::C     111::::::111                               
+F::::::::FF             CC:::::::::::::::C     1::::::::::1                               
+F::::::::FF               CCC::::::::::::C     1::::::::::1                               
+FFFFFFFFFFF                  CCCCCCCCCCCCC     111111111111                               
+
+IIIIIIIIII                                   hhhhhhh                  BBBBBBBBBBBBBBBBB   
+I::::::::I                                   h:::::h                  B::::::::::::::::B  
+I::::::::I                                   h:::::h                  B::::::BBBBBB:::::B 
+II::::::II                                   h:::::h                  BB:::::B     B:::::B
+  I::::Innnn  nnnnnnnn        cccccccccccccccch::::h hhhhh              B::::B     B:::::B
+  I::::In:::nn::::::::nn    cc:::::::::::::::ch::::hh:::::hhh           B::::B     B:::::B
+  I::::In::::::::::::::nn  c:::::::::::::::::ch::::::::::::::hh         B::::BBBBBB:::::B 
+  I::::Inn:::::::::::::::nc:::::::cccccc:::::ch:::::::hhh::::::h        B:::::::::::::BB  
+  I::::I  n:::::nnnn:::::nc::::::c     ccccccch::::::h   h::::::h       B::::BBBBBB:::::B 
+  I::::I  n::::n    n::::nc:::::c             h:::::h     h:::::h       B::::B     B:::::B
+  I::::I  n::::n    n::::nc:::::c             h:::::h     h:::::h       B::::B     B:::::B
+  I::::I  n::::n    n::::nc::::::c     ccccccch:::::h     h:::::h       B::::B     B:::::B
+II::::::IIn::::n    n::::nc:::::::cccccc:::::ch:::::h     h:::::h     BB:::::BBBBBB::::::B
+I::::::::In::::n    n::::n c:::::::::::::::::ch:::::h     h:::::h     B:::::::::::::::::B 
+I::::::::In::::n    n::::n  cc:::::::::::::::ch:::::h     h:::::h     B::::::::::::::::B  
+IIIIIIIIIInnnnnn    nnnnnn    cccccccccccccccchhhhhhh     hhhhhhh     BBBBBBBBBBBBBBBBB   
+*/
+
+
+            //===========================
+            // Load Config cmd
+            //===========================
+
+            // load tile config
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1}; // config_load
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config assignment
+            #10 s00_axi_awaddr={2'd3,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{null ,tlfr,tlls,relu,mpool,biasl,outch,inchannl,krnlC,krnlR,ofmpC,ofmpR,ifmpC,ifmpR, pad ,psum_split_condense}
+                s00_axi_wdata={11'd0,1'b0,1'b1,1'b0, 1'b0, 2'd0, 5'd8, 10'd976, 3'd1, 3'd1, 6'd1, 6'd1, 6'd1, 6'd1,1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config done
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0}; // config_load=0, config_done=1
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // config done = 0
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0}; // config_done=0
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            //===========================
+            // AXI Lite read weight cmd
+            //===========================
+
+            // load weight
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null, mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0,11'd976, 13'd0, 1'b0, 1'b0, 1'b1};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check AXI4_cmdack
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[3]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // load weight command lift
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b0, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+
+            //======================
+            // AXI MSB read weight
+            //======================
+            i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=fc1_ochidx*1961+985;
+            m00_axi_arready = 1'b1;
+            while (!(!m00_axi_rready && transtotal==976)) 
+            begin
+                if (m00_axi_arvalid) begin
+                    bst_len_list[bstlenidxassign]=m00_axi_arlen;
+                    #10 
+                    if (bstlenidxassign==31)
+                        bstlenidxassign=0;
+                    else
+                        bstlenidxassign=bstlenidxassign+1;
+
+                    m00_axi_arready=1'b0;
+                    m00_axi_rvalid=1'b1;
+                end else begin
+                    #10 m00_axi_arready=1'b1;
+                end
+
+                if (m00_axi_rready && m00_axi_rvalid) begin
+                    m00_axi_rdata=FC1_wght_bus[transtotal+offset];
+                    
+                    if (i==bst_len_list[bstlenidxcompare]) begin
+                        m00_axi_rlast=1'b1;
+                        i=0;
+                        if (bstlenidxcompare==31) 
+                            bstlenidxcompare=0;
+                        else 
+                            bstlenidxcompare=bstlenidxcompare+1;
+                    end else begin
+                        m00_axi_rlast=1'b0;
+                        i=i+1;
+                    end
+
+                    transtotal=transtotal+1;
+                end else begin
+                    m00_axi_rlast=1'b0;
+                end
+            end
+            m00_axi_arready = 1'b0; m00_axi_rvalid = 1'b0; m00_axi_rdata = 64'd0; m00_axi_rlast = 1'b0; m00_axi_awready = 1'b0; m00_axi_wready = 1'b0; m00_axi_bvalid = 1'b0;
+
+
+            // check FSM comp and data
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[8:5]==4'd3 && s00_axi_rdata[12:9]==4'd0))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            //===========================
+            // AXI Lite read ifmap cmd
+            //===========================
+
+            // load ifmap
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,  mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd122, 13'd0, 1'b0, 1'b1, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check AXI4_cmdack
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[3]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // load ifmap command lift
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b0, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            //======================
+            // AXI MSB read ifmap
+            //======================
+            i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=123;
+            m00_axi_arready = 1'b1;
+            while (!(!m00_axi_rready && transtotal==122) )
+            begin
+                if (m00_axi_arvalid) begin
+                    bst_len_list[bstlenidxassign]=m00_axi_arlen;
+                    #10
+                    if (bstlenidxassign==31)
+                        bstlenidxassign=0;
+                    else
+                        bstlenidxassign=bstlenidxassign+1;
+
+                    m00_axi_arready=1'b0;
+                    m00_axi_rvalid=1'b1;
+                end else begin
+                    #10 m00_axi_arready=1'b1;
+                end
+
+                if (m00_axi_rready) begin
+                    m00_axi_rdata=FC1_ifmap_bus[transtotal+offset];
+                    
+                    if (i==bst_len_list[bstlenidxcompare]) begin
+                        m00_axi_rlast=1'b1;
+                        i=0;
+                        if (bstlenidxcompare==31) 
+                            bstlenidxcompare=0;
+                        else 
+                            bstlenidxcompare=bstlenidxcompare+1;
+                    end else begin
+                        m00_axi_rlast=1'b0;
+                        i=i+1;
+                    end
+
+                    transtotal=transtotal+1;
+                end else begin
+                    m00_axi_rlast=1'b0;
+                end
+            end
+            m00_axi_arready = 1'b0; m00_axi_rvalid = 1'b0; m00_axi_rdata = 64'd0; m00_axi_rlast = 1'b0; m00_axi_awready = 1'b0; m00_axi_wready = 1'b0; m00_axi_bvalid = 1'b0;
+
+            // check FSM comp and data
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[8:5]==4'd8 && s00_axi_rdata[12:9]==4'd0))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            //===========================
+            // AXI Lite operation go cmd
+            //===========================
+            // op_go
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0}; // op_go=1
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check tile_done
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[1]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            //===========================
+            // AXI Lite write ofmap cmd
+            //===========================
+            // op_go cmd lift
+            #10 s00_axi_awaddr={2'd1,3'd0}; s00_axi_awvalid=1'b1; s00_axi_wdata={59'd0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0}; // op_go=0
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // offload ofmap cmd
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b1, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            // check AXI4_cmdack
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[3]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+            // offload ofmap command lift
+            #10 s00_axi_awaddr={2'd2,3'd0}; s00_axi_awvalid=1'b1; 
+                            //{   ctrl_addr, null,mstlen,  null,ofmol,ifmld,wgtld}
+                s00_axi_wdata={32'h00010000, 5'd0, 11'd2, 13'd0, 1'b0, 1'b0, 1'b0};
+                s00_axi_wvalid=1'b1; s00_axi_wstrb=8'b11111111; s00_axi_bready=1'b1;
+            while (s00_axi_awvalid || s00_axi_wvalid) 
+            begin
+                if (s00_axi_awready && s00_axi_wready) begin
+                    #10 s00_axi_awvalid=1'b0; s00_axi_wvalid=1'b0;
+                end else begin
+                    #10;
+                end
+            end
+            s00_axi_awaddr={2'd0,3'd0}; s00_axi_wdata=64'd0; s00_axi_wstrb=8'b00000000;
+            while (s00_axi_bready) 
+            begin
+                if (s00_axi_bvalid) 
+                    #10 s00_axi_bready=1'b0;
+            end
+
+            //======================
+            // AXI MSB write ofmap
+            //======================
+            i=0; transtotal=0; bstlenidxassign=0; bstlenidxcompare=0; offset=fc1_ochidx;
+            m00_axi_awready=1'b1;
+            while (!(!m00_axi_wvalid && transtotal==2))
+            begin
+                if (m00_axi_awvalid) begin
+                    bst_len_list[bstlenidxassign]=m00_axi_awlen;
+                    #10
+                    if (bstlenidxassign==31)
+                        bstlenidxassign=0;
+                    else
+                        bstlenidxassign=bstlenidxassign+1;                
+                        
+                    m00_axi_awready=1'b0;
+                    m00_axi_wready=1'b1;
+                end else begin
+                    #10 m00_axi_awready=1'b1;
+                end
+
+                if (m00_axi_wvalid) begin
+                    L1_ofmap_bus[transtotal+offset]=m00_axi_wdata;
+                    if (m00_axi_wlast) 
+                        m00_axi_bvalid=1'b1;
+                    else
+                        m00_axi_bvalid=1'b0;
+
+                    transtotal=transtotal+1;
+                end else begin
+                    m00_axi_bvalid=1'b0;
+                end
+            end
+            m00_axi_awready = 1'b0; m00_axi_wready = 1'b0; m00_axi_bvalid = 1'b0; m00_axi_arready = 1'b0; m00_axi_rvalid = 1'b0; m00_axi_rdata = 64'd0; m00_axi_rlast = 1'b0; 
+
+            // check op_done
+            #10 s00_axi_araddr={2'd0,3'd0}; s00_axi_arvalid=1'b1; s00_axi_rready=1'b1;
+            while (!(s00_axi_rvalid && s00_axi_rdata[2]))
+            begin
+                #10 ;
+            end
+            s00_axi_arvalid=1'b0; 
+            #10 s00_axi_rready=1'b0;
+
+
+
+
+
+        end // fc1 output channel loop
+
+
+/*
+FFFFFFFFFFFFFFFFFFFFFF       CCCCCCCCCCCCC      222222222222222    
+F::::::::::::::::::::F    CCC::::::::::::C     2:::::::::::::::22  
+F::::::::::::::::::::F  CC:::::::::::::::C     2::::::222222:::::2 
+FF::::::FFFFFFFFF::::F C:::::CCCCCCCC::::C     2222222     2:::::2 
+  F:::::F       FFFFFFC:::::C       CCCCCC                 2:::::2 
+  F:::::F            C:::::C                               2:::::2 
+  F::::::FFFFFFFFFF  C:::::C                            2222::::2  
+  F:::::::::::::::F  C:::::C                       22222::::::22   
+  F:::::::::::::::F  C:::::C                     22::::::::222     
+  F::::::FFFFFFFFFF  C:::::C                    2:::::22222        
+  F:::::F            C:::::C                   2:::::2             
+  F:::::F             C:::::C       CCCCCC     2:::::2             
+FF:::::::FF            C:::::CCCCCCCC::::C     2:::::2       222222
+F::::::::FF             CC:::::::::::::::C     2::::::2222222:::::2
+F::::::::FF               CCC::::::::::::C     2::::::::::::::::::2
+FFFFFFFFFFF                  CCCCCCCCCCCCC     22222222222222222222
+*/
+
+
+
+
 
 
         #100 $finish;
