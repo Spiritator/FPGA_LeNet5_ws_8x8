@@ -187,12 +187,13 @@ bias_in_PE=bias_in_PE.astype(np.int8)
 with open('SDK_lib/fc2_wght.hpp','w') as lib_file:
     lib_file.write('volatile unsigned long long fc2_wght[258] = {\n')
     
-    for ochsplit in range(2):
+    for biasidx in range(2):
         text_store='0x'
-        text_store+=bytes(bias_in_PE[ochsplit,::-1]).hex()
+        text_store+=bytes(bias_in_PE[biasidx,::-1]).hex()
         text_store+=' ,\n'
         lib_file.write(text_store)
-        
+    
+    for ochsplit in range(2):
         for kslc in range(16):
             for PEy in reversed(range(8)):
                 text_store='0x'
@@ -201,7 +202,6 @@ with open('SDK_lib/fc2_wght.hpp','w') as lib_file:
                 lib_file.write(text_store)
                 
     lib_file.write('};')
-
 
 #%% number4 ref pic gen
 

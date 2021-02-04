@@ -408,7 +408,7 @@ for tileidx in range(3):
                 input_file.write(text_store)                            
                 
 
-#%% LeNet5 weight stationary 8x8 Vivado Project ofmap validate memwrite L2
+#%% LeNet5 weight stationary 8x8 Vivado Project ofmap validate memwrite Pool2
 
 sim_set='pool_test'
 
@@ -440,6 +440,25 @@ for i in range(3):
     
     differ=np.subtract(RTL_ofmap_out,ofmap_out_PE_slice)
     print(np.sum(np.abs(differ)))
+    
+    
+    
+sim_set='system_2_axi_buses_v1_2'
+
+with open('LeNet5_ws_8x8_mem/'+sim_set+'/fc1_ifmap.mem','r') as result_file:
+    RTL_ofmap_out=result_file.readlines()
+
+for p,line in enumerate(RTL_ofmap_out):
+    line=line[:-1]
+    line=[int('0x'+line[i:i + 2],0) for i in reversed(range(0, len(line), 2))]
+    RTL_ofmap_out[p]=np.array(line).astype(np.int8)
+
+RTL_ofmap_out=np.array(RTL_ofmap_out)    
+RTL_ofmap_out=np.reshape(RTL_ofmap_out, [3,2,49,8])
+
+differ=np.subtract(RTL_ofmap_out,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
 
 #%% LeNet5 weight stationary 8x8 Vivado Project data prep FC1
 
@@ -473,6 +492,12 @@ bias_in_PE=np.round(bias_in_PE)
 bias_in_PE=bias_in_PE.astype(np.int8)
 # [tile,PE_x]
 
+ifmap_in_PE=np.multiply(ifmap,2**3)
+ifmap_in_PE=ifmap_in_PE.astype(np.int8)
+
+ofmap_out_PE=np.multiply(ofmap,2**3)
+ofmap_out_PE=ofmap_out_PE.astype(np.int8)
+
 #%% LeNet5 weight stationary 8x8 Vivado Project textfigure gen memread FC1
 
 with open('LeNet5_ws_8x8_mem/fc1_wght.mem','w') as input_file:    
@@ -490,6 +515,24 @@ with open('LeNet5_ws_8x8_mem/fc1_wght.mem','w') as input_file:
                 input_file.write(text_store)
             
     
+#%% LeNet5 weight stationary 8x8 Vivado Project ofmap validate memwrite FC1
+
+sim_set='system_2_axi_buses_v1_2'
+
+with open('LeNet5_ws_8x8_mem/'+sim_set+'/fc1_ofmap.mem','r') as result_file:
+    RTL_ofmap_out=result_file.readlines()
+
+for p,line in enumerate(RTL_ofmap_out):
+    line=line[:-1]
+    line=[int('0x'+line[i:i + 2],0) for i in reversed(range(0, len(line), 2))]
+    RTL_ofmap_out[p]=np.array(line).astype(np.int8)
+
+RTL_ofmap_out=np.array(RTL_ofmap_out)[:-1]
+RTL_ofmap_out=np.reshape(RTL_ofmap_out, 128)
+
+differ=np.subtract(RTL_ofmap_out,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
 
 #%% LeNet5 weight stationary 8x8 Vivado Project data prep FC2
 
@@ -505,6 +548,9 @@ with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
     kernel=weight_f['dense_2']['dense_2/kernel:0'][()]
     bias=weight_f['dense_2']['dense_2/bias:0'][()]
 
+kernel_in=np.multiply(kernel,2**3)
+kernel_in=np.round(kernel_in)
+kernel_in=kernel_in.astype(np.int8)
 
 kernel_in_PE=np.pad(kernel,((0, 0), (0, 6)),'constant',constant_values=0)
 kernel_in_PE=np.stack(np.split(kernel_in_PE,16/8,axis=-1))
@@ -520,16 +566,29 @@ bias_in_PE=np.round(bias_in_PE)
 bias_in_PE=bias_in_PE.astype(np.int8)
 # [tile,PE_x]
 
+ifmap_in_PE=np.multiply(ifmap,2**3)
+ifmap_in_PE=ifmap_in_PE.astype(np.int8)
+
+ofmap_out=np.dot(ifmap_in_PE.astype(np.int32),kernel_in.astype(np.int32))
+ofmap_out=np.floor_divide(ofmap_out, 2**3)
+ofmap_out_PE=np.clip(ofmap_out, -128, 127)
+ofmap_out_PE=ofmap_out_PE.astype(np.int8)
+
+# ofmap_out_PE=logit(ofmap)
+# ofmap_out_PE=np.multiply(ofmap_out_PE,2**3)
+# ofmap_out_PE=np.floor(ofmap_out_PE)
+# ofmap_out_PE=np.clip(ofmap_out_PE, -128, 127)
+# ofmap_out_PE=ofmap_out_PE.astype(np.int8)
 
 #%% LeNet5 weight stationary 8x8 Vivado Project textfigure gen memread FC2
 
-with open('LeNet5_ws_8x8_mem/fc2_wght.mem','w') as input_file:    
-    for ochsplit in range(2):
+with open('LeNet5_ws_8x8_mem/fc2_wght.mem','w') as input_file:  
+    for biasidx in range(2):
         text_store=''
-        text_store+=bytes(bias_in_PE[ochsplit,::-1]).hex()
+        text_store+=bytes(bias_in_PE[biasidx,::-1]).hex()
         text_store+='\n'
         input_file.write(text_store)
-        
+    for ochsplit in range(2):
         for kslc in range(16):
             for PEy in reversed(range(8)):
                 text_store=''
@@ -538,6 +597,25 @@ with open('LeNet5_ws_8x8_mem/fc2_wght.mem','w') as input_file:
                 input_file.write(text_store)
                 
     
+#%% LeNet5 weight stationary 8x8 Vivado Project ofmap validate memwrite FC2
+
+sim_set='system_2_axi_buses_v1_2'
+
+with open('LeNet5_ws_8x8_mem/'+sim_set+'/pred.mem','r') as result_file:
+    RTL_ofmap_out=result_file.readlines()
+
+for p,line in enumerate(RTL_ofmap_out):
+    line=line[:-1]
+    line=[int('0x'+line[i:i + 2],0) for i in reversed(range(0, len(line), 2))]
+    RTL_ofmap_out[p]=np.array(line).astype(np.int8)
+
+RTL_ofmap_out=np.array(RTL_ofmap_out)
+RTL_ofmap_out=RTL_ofmap_out.flatten()[:10]
+
+differ=np.subtract(RTL_ofmap_out,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
+
 #%% LeNet5 weight stationary 8x8 Vivado Project data prep Conv1->Pool1->Conv2->Pool2->FC1
 
 import numpy as np
@@ -635,7 +713,7 @@ import h5py
 lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
 lenet_intermediate=list(lenet_intermediate)
 ifmap=lenet_intermediate[0]
-ofmap=lenet_intermediate[7]
+predin=lenet_intermediate[6]
 
 with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
     kernel=weight_f['dense_1']['dense_1/kernel:0'][()]
@@ -660,8 +738,44 @@ def preprocess_input_img_mem(img):
     
     return img_processed
 
+kernel_in=np.multiply(kernel,2**3)
+kernel_in=np.round(kernel_in)
+kernel_in=kernel_in.astype(np.int8)
+
+pred_in_PE=np.multiply(predin,2**3)
+pred_in_PE=pred_in_PE.astype(np.int8)
+
+pred_out=np.dot(pred_in_PE.astype(np.int32),kernel_in.astype(np.int32))
+pred_out=np.floor_divide(pred_out, 2**3)
+pred_out=np.clip(pred_out, -128, 127)
+pred_out=pred_out.astype(np.int8)
+
+#%% LeNet5 weight stationary 8x8 Vivado Project textfigure gen memread Conv1->Pool1->Conv2->Pool2->FC1->FC2
+
 ifmap_in_mem=preprocess_input_img_mem(ifmap)
 
+with open('LeNet5_ws_8x8_mem/input_pic.mem','w') as input_file:
+    for i2d in range(1024):
+        text_store=''
+        text_store+=bytes(ifmap_in_mem[i2d,::-1]).hex()
+        text_store+='\n'
+        input_file.write(text_store)
 
 
+#%% LeNet5 weight stationary 8x8 Vivado Project ofmap validate memwrite Conv1->Pool1->Conv2->Pool2->FC1-FC2
 
+sim_set='system_2_axi_buses_v1_2'
+
+with open('LeNet5_ws_8x8_mem/'+sim_set+'/pred.mem','r') as result_file:
+    RTL_pred_out=result_file.readlines()
+
+for p,line in enumerate(RTL_pred_out):
+    line=line[:-1]
+    line=[int('0x'+line[i:i + 2],0) for i in reversed(range(0, len(line), 2))]
+    RTL_pred_out[p]=np.array(line).astype(np.int8)
+
+RTL_pred_out=np.array(RTL_pred_out)
+RTL_pred_out=RTL_pred_out.flatten()[:10]
+
+differ=np.subtract(RTL_pred_out,pred_out)
+print(np.sum(np.abs(differ)))
