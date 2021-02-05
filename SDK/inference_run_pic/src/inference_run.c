@@ -78,9 +78,12 @@ uint64_t op_cmd(bool config_load, bool config_done, bool op_go, bool rst, bool a
     return (axi_rst<<4) | (rst<<3) | (op_go<<2) | (config_done<<1) | config_load;
 };
 
-uint64_t config_cmd(bool psum_split_condense, bool padding, unsigned char ifmapR, unsigned char ifmapC, unsigned char ofmapR, unsigned char ofmapC, unsigned char kernelR, unsigned char kernelC, unsigned short inchannel, unsigned char outchannel, unsigned char bias_len, bool maxpooling)
+uint64_t config_cmd(bool psum_split_condense, bool padding, unsigned char ifmapR, unsigned char ifmapC, unsigned char ofmapR, unsigned char ofmapC, unsigned char kernelR, unsigned char kernelC, unsigned short inchannel, unsigned char outchannel, unsigned char bias_len, bool maxpooling, bool relu, bool tile_order_first, bool tile_order_last)
 {
     uint64_t cmdbuf=0;
+    cmdbuf= cmdbuf | ((uint64_t)tile_order_last<<52);
+    cmdbuf= cmdbuf | ((uint64_t)tile_order_first<<51);
+    cmdbuf= cmdbuf | ((uint64_t)relu<<50);
     cmdbuf= cmdbuf | ((uint64_t)maxpooling<<49);
     cmdbuf= cmdbuf | ((uint64_t)bias_len<<47);
     cmdbuf= cmdbuf | ((uint64_t)outchannel<<42);
@@ -120,11 +123,19 @@ void read_status(uint64_t dla_status, bool* dataload_ready, bool* tile_done, boo
     *FSM_data= (dla_status>>9) & 15;
 };
 
+void predict_print(void)
+{
+    uint64_t pred0,pred1;
+    pred0=Xil_In64(PRED_BASEADDR);
+    pred1=Xil_In64(PRED_BASEADDR+8);
+    xil_printf("0: %d | 1: %d | 2: %d | 3: %d | 4: %d | 5: %d | 6: %d | 7: %d | 8: %d | 9: %d",(int8_t)pred0,(int8_t)(pred0>>8),(int8_t)(pred0>>16),(int8_t)(pred0>>24),(int8_t)(pred0>>32),(int8_t)(pred0>>40),(int8_t)(pred0>>48),(int8_t)(pred0>>56),(int8_t)pred1,(int8_t)(pred1>>8));
+}
+
 int main()
 {
     const int wordbyte=8;
     int i,j;
-    int wght_len[4]={82,2406,28432,258};
+    int wght_len[4]={82,2406,31376,258};
     int fmap_len[4]={1024,1568,1176,16};
     int fmap_idx[4]={1024,0,0,0};
     int wght_idx[4];
@@ -218,7 +229,7 @@ int main()
     xil_printf("Op cmd %016llx\n\r", DLA_cmd);
 
     // config assignment
-    DLA_cmd=config_cmd(1,0,32,32,28,28,5,5,1,8,1,0);
+    DLA_cmd=config_cmd(1,0,32,32,28,28,5,5,1,8,1,0,1,1,1);
     Xil_Out64(CONFIG_REGS,DLA_cmd);
     xil_printf("Config cmd %016llx\n\r", DLA_cmd);
 
@@ -426,7 +437,7 @@ int main()
     xil_printf("Op cmd %016llx\n\r", DLA_cmd);
 
     // config assignment
-    DLA_cmd=config_cmd(0,0,28,28,14,14,2,2,8,8,0,1);
+    DLA_cmd=config_cmd(0,0,28,28,14,14,2,2,8,8,0,1,0,1,1);
     Xil_Out64(CONFIG_REGS,DLA_cmd);
     xil_printf("Config cmd %016llx\n\r", DLA_cmd);
 
@@ -592,7 +603,7 @@ int main()
     xil_printf("Op cmd %016llx\n\r", DLA_cmd);
 
     // config assignment
-    DLA_cmd=config_cmd(0,1,14,14,14,14,5,5,16,16,2,0);
+    DLA_cmd=config_cmd(0,1,14,14,14,14,5,5,16,16,2,0,1,1,1);
     Xil_Out64(CONFIG_REGS,DLA_cmd);
     xil_printf("Config cmd %016llx\n\r", DLA_cmd);
 
@@ -900,7 +911,7 @@ int main()
     xil_printf("Op cmd %016llx\n\r", DLA_cmd);
 
     // config assignment
-    DLA_cmd=config_cmd(0,0,14,14,7,7,2,2,16,16,0,1);
+    DLA_cmd=config_cmd(0,0,14,14,7,7,2,2,16,16,0,1,0,1,1);
     Xil_Out64(CONFIG_REGS,DLA_cmd);
     xil_printf("Config cmd %016llx\n\r", DLA_cmd);
 
@@ -1135,6 +1146,324 @@ int main()
     }
 
     
+    //===============================
+    //    Fully-Connected 1 Setup
+    //===============================
+    //===================================
+    // Iterate Through 16 Output Channel
+    //===================================
+
+    for (j = 0; j < 16; j++)
+    {
+        //=================================================
+        //    Fully-Connected 1 Input Channel A TIle
+        //=================================================
+        xil_printf("Fully-Connected 1 Tile %dA\n\r",j);
+        //=============================
+        //     Configuration Set
+        //=============================
+        // load tile config
+        DLA_cmd=op_cmd(1,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        // config assignment
+        DLA_cmd=config_cmd(0,0,1,1,1,1,1,1,984,8,1,0,0,1,0);
+        Xil_Out64(CONFIG_REGS,DLA_cmd);
+        xil_printf("Config cmd %016llx\n\r", DLA_cmd);
+
+        // config done
+        DLA_cmd=op_cmd(0,1,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        DLA_cmd=op_cmd(0,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+
+        //=============================
+        //        Load Weight
+        //=============================
+        // load weight cmd
+        DLA_cmd=burst_cmd(1,0,0,DDR_BASEADDR+(wght_idx[2]+j*1961)*wordbyte,985);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+        xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+        // load weight cmd lift
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+
+        // check FSM comp and data
+        xil_printf("Load Weight\n\r");
+        while (!(FSM_comp==3 && FSM_data==0))
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        //=============================
+        //        Load Ifmap
+        //=============================
+        // load ifmap cmd
+        DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[1]*wordbyte,123);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+        xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+        // load ifmap cmd lift
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+
+        // check FSM comp and data
+        xil_printf("Load Ifmap\n\r");
+        while (!(FSM_comp==8 && FSM_data==0))
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        //=============================
+        //        Operation Go
+        //=============================
+        // op_go 
+        DLA_cmd=op_cmd(0,0,1,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        // check tile_done
+        xil_printf("Tile Computing\n\r");
+        while (! tile_done)
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        // op_go cmd lift
+        DLA_cmd=op_cmd(0,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+
+
+        //=================================================
+        //    Fully-Connected 1 Input Channel B TIle
+        //=================================================
+        xil_printf("Fully-Connected 1 Tile %dB\n\r",j);
+        //=============================
+        //     Configuration Set
+        //=============================
+        // load tile config
+        DLA_cmd=op_cmd(1,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        // config assignment
+        DLA_cmd=config_cmd(0,0,1,1,1,1,1,1,976,8,0,0,1,0,1);
+        Xil_Out64(CONFIG_REGS,DLA_cmd);
+        xil_printf("Config cmd %016llx\n\r", DLA_cmd);
+
+        // config done
+        DLA_cmd=op_cmd(0,1,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        DLA_cmd=op_cmd(0,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+
+        //=============================
+        //        Load Weight
+        //=============================
+        // load weight cmd
+        DLA_cmd=burst_cmd(1,0,0,DDR_BASEADDR+(wght_idx[2]+j*1961+985)*wordbyte,976);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+        xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+        // load weight cmd lift
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+
+        // check FSM comp and data
+        xil_printf("Load Weight\n\r");
+        while (!(FSM_comp==3 && FSM_data==0))
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        //=============================
+        //        Load Ifmap
+        //=============================
+        // load ifmap cmd
+        DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[1]*wordbyte+123,122);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+        xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+        // load ifmap cmd lift
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+
+        // check FSM comp and data
+        xil_printf("Load Ifmap\n\r");
+        while (!(FSM_comp==8 && FSM_data==0))
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        //=============================
+        //        Operation Go
+        //=============================
+        // op_go 
+        DLA_cmd=op_cmd(0,0,1,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+        xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+        // check tile_done
+        xil_printf("Tile Computing\n\r");
+        while (! tile_done)
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+        //=============================
+        //        Offload Ofmap
+        //=============================
+        // op_go cmd lift
+        DLA_cmd=op_cmd(0,0,0,0,0);
+        Xil_Out64(OP_CTRL,DLA_cmd);
+
+        // offload ofmap cmd
+        DLA_cmd=burst_cmd(0,0,1,IFMAP_BASEADDR+(fmap_idx[2]+j)*wordbyte,2);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+        xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+        // offload ofmap cmd lift
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        Xil_Out64(BURST_CTRL,DLA_cmd);
+
+        // check FSM comp and data
+        xil_printf("Offload Ofmap\n\r");
+        while (! op_done)
+        {
+            DLA_status=Xil_In64(STATUS_FLAGS);
+            read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+        }
+
+
+
+    }// fc1 output channel loop
+    
+
+    
+    //==========================
+    //    Fully-Connected 2 
+    //==========================
+    xil_printf("Fully-Connected 2\n\r",j);
+    //=============================
+    //     Configuration Set
+    //=============================
+    // load tile config
+    DLA_cmd=op_cmd(1,0,0,0,0);
+    Xil_Out64(OP_CTRL,DLA_cmd);
+    xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+    // config assignment
+    DLA_cmd=config_cmd(0,0,1,1,1,1,1,1,128,10,2,0,0,1,1);
+    Xil_Out64(CONFIG_REGS,DLA_cmd);
+    xil_printf("Config cmd %016llx\n\r", DLA_cmd);
+
+    // config done
+    DLA_cmd=op_cmd(0,1,0,0,0);
+    Xil_Out64(OP_CTRL,DLA_cmd);
+    xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+    DLA_cmd=op_cmd(0,0,0,0,0);
+    Xil_Out64(OP_CTRL,DLA_cmd);
+
+    //=============================
+    //        Load Weight
+    //=============================
+    // load weight cmd
+    DLA_cmd=burst_cmd(1,0,0,DDR_BASEADDR+(wght_idx[3])*wordbyte,258);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+    xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+    // load weight cmd lift
+    DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+
+    // check FSM comp and data
+    xil_printf("Load Weight\n\r");
+    while (!(FSM_comp==3 && FSM_data==0))
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    }
+
+    //=============================
+    //        Load Ifmap
+    //=============================
+    // load ifmap cmd
+    DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[2],16);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+    xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+    // load ifmap cmd lift
+    DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+
+    // check FSM comp and data
+    xil_printf("Load Ifmap\n\r");
+    while (!(FSM_comp==8 && FSM_data==0))
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    }
+
+    //=============================
+    //        Operation Go
+    //=============================
+    // op_go 
+    DLA_cmd=op_cmd(0,0,1,0,0);
+    Xil_Out64(OP_CTRL,DLA_cmd);
+    xil_printf("Op cmd %016llx\n\r", DLA_cmd);
+
+    // check tile_done
+    xil_printf("Tile Computing\n\r");
+    while (! tile_done)
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    }
+
+    //=============================
+    //        Offload Ofmap
+    //=============================
+    // op_go cmd lift
+    DLA_cmd=op_cmd(0,0,0,0,0);
+    Xil_Out64(OP_CTRL,DLA_cmd);
+
+    // offload ofmap cmd
+    DLA_cmd=burst_cmd(0,0,1,PRED_BASEADDR,2);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+    xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
+
+    // offload ofmap cmd lift
+    DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+    Xil_Out64(BURST_CTRL,DLA_cmd);
+
+    // check FSM comp and data
+    xil_printf("Offload Ofmap\n\r");
+    while (! op_done)
+    {
+        DLA_status=Xil_In64(STATUS_FLAGS);
+        read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
+    }
+
+
+    //=============================
+    //       Print Prediction
+    //=============================
+    predict_print();
+
+
     xil_printf("Inference Done!!!\n\r", DLA_cmd);
 
     cleanup_platform();
