@@ -256,22 +256,6 @@ wire [9:0] inchannel;
 wire [4:0] outchannel;
 wire [1:0] bias_len;
 
-// reg [63:0] mst_vali;
-
-// always @(posedge m00_axi_aclk or posedge rst) 
-// begin
-//     if (rst) 
-//     begin
-//         mst_vali<=64'd0;
-//     end else begin
-//         if (!bus2ip_mstrd_eof_n) begin
-//             mst_vali<=bus2ip_mstrd_d;
-//         end else begin
-//             mst_vali<=mst_vali;
-//         end
-//     end
-// end
-
 // systolic PE array & BRAM
 accelerator_top accelerater_ws8x8_bram( .clk(m00_axi_aclk),.rst(rst),
                                         .ifmap_en(ifmap_en),.wght_en(wght_en),.ofmap_en(ofmap_en),.config_load(config_load),.config_done(config_done),

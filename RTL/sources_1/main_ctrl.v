@@ -220,13 +220,12 @@ begin
         end
         slice_check:
         begin
-            if (tile_done) 
+            if (tile_done) begin
                 if (tile_order_last)
                     next_state=offload_ofmap;
                 else
                     next_state=idle;
-            else 
-            begin
+            end else begin
                 if (maxpooling) 
                     next_state=pooling;
                 else 
@@ -515,7 +514,10 @@ begin
             Ocidx<=5'd0;
             Psplitidx<=10'd0;
             Ochidx<=1'b0;
-            tile_done<=1'b0;
+            if (tile_order_last) 
+                tile_done<=1'b0;
+            else
+                tile_done<=tile_done;
             check_done<=1'b0;
             substate_slccheck<=2'd0;
             slc_iaddrb_ps<=10'd0;
@@ -530,8 +532,8 @@ begin
             slc_ofmap_addr_mv<=10'd0;
             slc_wght_addr_mv<=3'd0;
             wght_shift_done<=1'b0;
-            ofbufshift_done<=16'd0;
-            ofbufshift_wen<=16'd0;
+            ofbufshift_done<=18'd0;
+            ofbufshift_wen<=18'd0;
             poolwrite<=1'b0;
         end
         load_tile_config:

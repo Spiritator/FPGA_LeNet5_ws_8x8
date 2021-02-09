@@ -167,7 +167,7 @@ assign n_psum_slices=psum_split_condense ? npslccon : npslcinch;
 assign outchsplit=outchannel[4:3] + ( |outchannel[2:0] );
 assign Irref=ifmapRinner-1'b1;
 assign Icref=ifmapCinner-1'b1;
-assign offofref= ofmapsize<2 ? 10'd1 : ofmapsize-1'b1;
+assign offofref= ofmapsize<2 ? ctrl_mst_length-1'b1 : ofmapsize-1'b1;
 assign padr=padding ? kernelR[2:1] : 2'd0;
 assign padc=padding ? kernelC[2:1] : 2'd0;
 assign Psplitref=n_psum_slices-1'b1;
@@ -408,7 +408,7 @@ end
 
 
 
-always @(current_state or burst_cnt or offofref) 
+always @(current_state or burst_cnt or offofref or bus2ip_mstwr_dst_rdy_n) 
 begin
     case (current_state)
         idle: 
@@ -449,7 +449,7 @@ begin
             else 
                 ip2bus_mstwr_sof_n=1'b1;
 
-            if (burst_cnt==offofref)
+            if (burst_cnt==offofref && !bus2ip_mstwr_dst_rdy_n)
                 ip2bus_mstwr_eof_n=1'b0;
             else
                 ip2bus_mstwr_eof_n=1'b1;

@@ -276,7 +276,7 @@ ofmap_sdk=np.reshape(ofmap_sdk, [2,784,8])
 differ=np.subtract(ofmap_sdk,ofmap_out_PE)
 print(np.sum(np.abs(differ)))
 
-#%% ofmap data prep fc1 
+#%% ofmap data prep conv2
 
 import numpy as np
 
@@ -297,7 +297,7 @@ ofmap_out_PE=ofmap_out_PE.astype(np.int32)
  
 
 
-#%% validate SDK export binary file conv1
+#%% validate SDK export binary file conv2
 
 import numpy as np
 
@@ -314,5 +314,80 @@ ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
 ofmap_sdk=np.reshape(ofmap_sdk, [3,2,49,8])
 
 differ=np.subtract(ofmap_sdk,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
+#%% ofmap data prep fc1
+
+import numpy as np
+import h5py
+
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=list(lenet_intermediate)
+ofmap=lenet_intermediate[6]
+
+ofmap_out_PE=np.multiply(ofmap,2**3)
+ofmap_out_PE=ofmap_out_PE.astype(np.int8)
+
+#%% validate SDK export binary file fc1
+
+import numpy as np
+
+filename='fc1_ofmap.bin'
+ofmap_bytes=list()
+with open('SDK_bin/'+filename,'rb') as bin_output_file:
+    byte=bin_output_file.read(1)
+    while byte:
+        ofmap_bytes.append(byte)
+        byte=bin_output_file.read(1)
+    
+ofmap_bytes=np.array(ofmap_bytes)
+ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
+
+differ=np.subtract(ofmap_sdk,ofmap_out_PE)
+print(np.sum(np.abs(differ)))
+
+#%% ofmap data prep fc2 
+
+import numpy as np
+import h5py
+
+lenet_intermediate=np.load("lenet_intermediate_hybrid_ovf.npy",allow_pickle=True)
+lenet_intermediate=list(lenet_intermediate)
+predin=lenet_intermediate[6]
+
+with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
+    kernel=weight_f['dense_2']['dense_2/kernel:0'][()]
+    bias=weight_f['dense_2']['dense_2/bias:0'][()]
+
+
+kernel_in=np.multiply(kernel,2**3)
+kernel_in=np.round(kernel_in)
+kernel_in=kernel_in.astype(np.int8)
+
+pred_in_PE=np.multiply(predin,2**3)
+pred_in_PE=pred_in_PE.astype(np.int8)
+
+pred_out=np.dot(pred_in_PE.astype(np.int32),kernel_in.astype(np.int32))
+pred_out=np.floor_divide(pred_out, 2**3)
+pred_out=np.clip(pred_out, -128, 127)
+pred_out=pred_out.astype(np.int8)
+
+
+#%% validate SDK export binary file fc2
+
+import numpy as np
+
+filename='pred.bin'
+ofmap_bytes=list()
+with open('SDK_bin/'+filename,'rb') as bin_output_file:
+    byte=bin_output_file.read(1)
+    while byte:
+        ofmap_bytes.append(byte)
+        byte=bin_output_file.read(1)
+    
+ofmap_bytes=np.array(ofmap_bytes)[:10]
+ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
+
+differ=np.subtract(ofmap_sdk,pred_out)
 print(np.sum(np.abs(differ)))
 

@@ -1,2 +1,4 @@
 mrd -bin -file E:/verilog/FPGA_LeNet5_ws_8x8/implement_automation/SDK_bin/conv1_ofmap.bin 0x16002000 3136
 mrd -bin -file E:/verilog/FPGA_LeNet5_ws_8x8/implement_automation/SDK_bin/FC1_ifmap.bin 0x16005100 588
+mrd -bin -file E:/verilog/FPGA_LeNet5_ws_8x8/implement_automation/SDK_bin/FC1_ofmap.bin 0x160075C0 32
+mrd -bin -file E:/verilog/FPGA_LeNet5_ws_8x8/implement_automation/SDK_bin/pred.bin 0x17000000 4

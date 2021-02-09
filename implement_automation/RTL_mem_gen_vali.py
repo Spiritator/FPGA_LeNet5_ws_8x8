@@ -693,14 +693,6 @@ RTL_ofmap_out=np.split(RTL_ofmap_out,3)
 RTL_ofmap_out=np.stack(RTL_ofmap_out)
 RTL_ofmap_out=np.split(RTL_ofmap_out,2,axis=1)
 RTL_ofmap_out=np.stack(RTL_ofmap_out,axis=1)
-    
-# RTL_ofmap_out=np.reshape(RTL_ofmap_out, [14,14,16])
-# RTL_ofmap_out=np.transpose(RTL_ofmap_out,[1,0,2])
-    
-# ofmap_out_PE_slice=np.concatenate(ofmap_out_PE,axis=1)
-# ofmap_out_PE_slice=np.concatenate(ofmap_out_PE_slice,axis=1)
-# ofmap_out_PE_slice=np.reshape(ofmap_out_PE_slice, [14,14,16])
-# ofmap_out_PE_slice=np.transpose(ofmap_out_PE_slice,[1,0,2])
 
 differ=np.subtract(RTL_ofmap_out,ofmap_out_PE)
 print(np.sum(np.abs(differ)))
@@ -716,8 +708,8 @@ ifmap=lenet_intermediate[0]
 predin=lenet_intermediate[6]
 
 with h5py.File("mnist_lenet5_weight.h5",'r') as weight_f:
-    kernel=weight_f['dense_1']['dense_1/kernel:0'][()]
-    bias=weight_f['dense_1']['dense_1/bias:0'][()]
+    kernel=weight_f['dense_2']['dense_2/kernel:0'][()]
+    bias=weight_f['dense_2']['dense_2/bias:0'][()]
 
 def preprocess_input_img_mem(img):
     # img shape (28,28,1)

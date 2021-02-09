@@ -128,7 +128,7 @@ void predict_print(void)
     uint64_t pred0,pred1;
     pred0=Xil_In64(PRED_BASEADDR);
     pred1=Xil_In64(PRED_BASEADDR+8);
-    xil_printf("0: %d | 1: %d | 2: %d | 3: %d | 4: %d | 5: %d | 6: %d | 7: %d | 8: %d | 9: %d",(int8_t)pred0,(int8_t)(pred0>>8),(int8_t)(pred0>>16),(int8_t)(pred0>>24),(int8_t)(pred0>>32),(int8_t)(pred0>>40),(int8_t)(pred0>>48),(int8_t)(pred0>>56),(int8_t)pred1,(int8_t)(pred1>>8));
+    xil_printf("0: %d | 1: %d | 2: %d | 3: %d | 4: %d | 5: %d | 6: %d | 7: %d | 8: %d | 9: %d\n\r",(int8_t)pred0,(int8_t)(pred0>>8),(int8_t)(pred0>>16),(int8_t)(pred0>>24),(int8_t)(pred0>>32),(int8_t)(pred0>>40),(int8_t)(pred0>>48),(int8_t)(pred0>>56),(int8_t)pred1,(int8_t)(pred1>>8));
 }
 
 int main()
@@ -1145,7 +1145,16 @@ int main()
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
 
-    
+    //==================================================================
+    //      SET ALL FMAP TO ZERO
+    //==================================================================    
+    // int clearaddr=0x16005100;
+    // uint64_t zero=0;
+    // for (i = 0; i < 1176; i++)
+    // {
+    //     Xil_Out64(clearaddr+i*wordbyte,zero);
+    // }
+
     //===============================
     //    Fully-Connected 1 Setup
     //===============================
@@ -1290,7 +1299,7 @@ int main()
         //        Load Ifmap
         //=============================
         // load ifmap cmd
-        DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[1]*wordbyte+123,122);
+        DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+(fmap_idx[1]+123)*wordbyte,122);
         Xil_Out64(BURST_CTRL,DLA_cmd);
         xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
 
@@ -1335,7 +1344,7 @@ int main()
         xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
 
         // offload ofmap cmd lift
-        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,1);
+        DLA_cmd=burst_cmd(0,0,0,DDR_BASEADDR,2);
         Xil_Out64(BURST_CTRL,DLA_cmd);
 
         // check FSM comp and data
@@ -1347,15 +1356,13 @@ int main()
         }
 
 
-
-    }// fc1 output channel loop
-    
+    }// fc1 output channel loop   
 
     
     //==========================
     //    Fully-Connected 2 
     //==========================
-    xil_printf("Fully-Connected 2\n\r",j);
+    xil_printf("Fully-Connected 2\n\r");
     //=============================
     //     Configuration Set
     //=============================
@@ -1401,7 +1408,7 @@ int main()
     //        Load Ifmap
     //=============================
     // load ifmap cmd
-    DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[2],16);
+    DLA_cmd=burst_cmd(0,1,0,IFMAP_BASEADDR+fmap_idx[2]*wordbyte,16);
     Xil_Out64(BURST_CTRL,DLA_cmd);
     xil_printf("Burst cmd %016llx\n\r", DLA_cmd);
 
@@ -1464,7 +1471,7 @@ int main()
     predict_print();
 
 
-    xil_printf("Inference Done!!!\n\r", DLA_cmd);
+    xil_printf("\n\rInference Done!!!\n\r", DLA_cmd);
 
     cleanup_platform();
     return 0;
