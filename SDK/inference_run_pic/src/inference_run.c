@@ -52,6 +52,7 @@
 #include "xil_printf.h"
 #include "xil_io.h"
 #include "xil_cache.h"
+#include "xtime_l.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -72,6 +73,7 @@
 
 volatile u32 *WGHT_DATA = (u32 *) 0x10000000;
 volatile u32 *IFMAP_DATA = (u32 *) 0x16000000;
+volatile u32 *OFMAP_DATA = (u32 *) 0x17000000;
 
 uint64_t op_cmd(bool config_load, bool config_done, bool op_go, bool rst, bool axi_rst)
 {
@@ -129,7 +131,7 @@ void predict_print(void)
     pred0=Xil_In64(PRED_BASEADDR);
     pred1=Xil_In64(PRED_BASEADDR+8);
     xil_printf("0: %d | 1: %d | 2: %d | 3: %d | 4: %d | 5: %d | 6: %d | 7: %d | 8: %d | 9: %d\n\r",(int8_t)pred0,(int8_t)(pred0>>8),(int8_t)(pred0>>16),(int8_t)(pred0>>24),(int8_t)(pred0>>32),(int8_t)(pred0>>40),(int8_t)(pred0>>48),(int8_t)(pred0>>56),(int8_t)pred1,(int8_t)(pred1>>8));
-}
+};
 
 int main()
 {
@@ -191,6 +193,18 @@ int main()
         Xil_Out64(IFMAP_BASEADDR+i*wordbyte,ref_pic[i]);
     }
 
+    //=============================
+    //        Timer Setup
+    //=============================
+	XTime tStart, tEnd, tCalib, tExeCycle;
+	XTime tAccum = 0;
+
+	XTime_GetTime(&tStart);
+    XTime_GetTime(&tEnd);
+    // timer calibration
+	tCalib = tEnd - tStart;
+	xil_printf("tStart = %d cycle | tEnd = %d cycle | tCalib = %d cycle \n\r", tStart, tEnd, tCalib);
+
 
     //=============================
     //     Inference Control
@@ -220,6 +234,7 @@ int main()
     //    Convolution 1 Tile 0
     //=============================
     xil_printf("Convolution 1 Tile 0\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -321,12 +336,21 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+    xil_printf("Convolution 1 Tile 0 execution %d cycles \n\r", tExeCycle);
 
 
     //=============================
     //    Convolution 1 Tile 1
     //=============================
     xil_printf("Convolution 1 Tile 1\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -422,12 +446,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Convolution 1 Tile 1 execution %d cycles \n\r", tExeCycle);
 
 
     //=============================
     //    Maxpooling 1 Tile 0
     //=============================
     xil_printf("Maxpooling 1 Tile 0\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -508,11 +540,19 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Maxpooling 1 Tile 0 execution %d cycles \n\r", tExeCycle);
 
     //=============================
     //    Maxpooling 1 Tile 1
     //=============================
     xil_printf("Maxpooling 1 Tile 1\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -588,12 +628,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Maxpooling 1 Tile 1 execution %d cycles \n\r", tExeCycle);
 
 
     //=============================
     //    Convolution 2 Tile 0
     //=============================
     xil_printf("Convolution 2 Tile 0\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -694,12 +742,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Convolution 2 Tile 0 execution %d cycles \n\r", tExeCycle);
 
     
     //=============================
     //    Convolution 2 Tile 1
     //=============================
     xil_printf("Convolution 2 Tile 1\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -795,12 +851,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Convolution 2 Tile 1 execution %d cycles \n\r", tExeCycle);
 
 
     //=============================
     //    Convolution 2 Tile 2
     //=============================
     xil_printf("Convolution 2 Tile 2\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -896,12 +960,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Convolution 2 Tile 2 execution %d cycles \n\r", tExeCycle);
 
     
     //=============================
     //    Maxpooling 2 Tile 0
     //=============================
     xil_printf("Maxpooling 2 Tile 0\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -982,12 +1054,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Maxpooling 2 Tile 0 execution %d cycles \n\r", tExeCycle);
     
 
     //=============================
     //    Maxpooling 2 Tile 1
     //=============================
     xil_printf("Maxpooling 2 Tile 1\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -1063,12 +1143,20 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Maxpooling 2 Tile 1 execution %d cycles \n\r", tExeCycle);
 
     
     //=============================
     //    Maxpooling 2 Tile 2
     //=============================
     xil_printf("Maxpooling 2 Tile 2\n\r");
+	XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -1144,16 +1232,14 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
+    //=============================
+    //        Tile End
+    //=============================
+	XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Maxpooling 2 Tile 2 execution %d cycles \n\r", tExeCycle);
 
-    //==================================================================
-    //      SET ALL FMAP TO ZERO
-    //==================================================================    
-    // int clearaddr=0x16005100;
-    // uint64_t zero=0;
-    // for (i = 0; i < 1176; i++)
-    // {
-    //     Xil_Out64(clearaddr+i*wordbyte,zero);
-    // }
 
     //===============================
     //    Fully-Connected 1 Setup
@@ -1168,6 +1254,7 @@ int main()
         //    Fully-Connected 1 Input Channel A TIle
         //=================================================
         xil_printf("Fully-Connected 1 Tile %dA\n\r",j);
+        XTime_GetTime(&tStart);
         //=============================
         //     Configuration Set
         //=============================
@@ -1249,11 +1336,21 @@ int main()
         DLA_cmd=op_cmd(0,0,0,0,0);
         Xil_Out64(OP_CTRL,DLA_cmd);
 
+        //=============================
+        //        Tile End
+        //=============================
+        XTime_GetTime(&tEnd);
+        tExeCycle = tEnd - tStart - tCalib;
+        tAccum += tExeCycle;
+        xil_printf("Fully-Connected 1 Tile %dA execution %d cycles \n\r", j, tExeCycle);
+
+
 
         //=================================================
         //    Fully-Connected 1 Input Channel B TIle
         //=================================================
         xil_printf("Fully-Connected 1 Tile %dB\n\r",j);
+        XTime_GetTime(&tStart);
         //=============================
         //     Configuration Set
         //=============================
@@ -1354,6 +1451,13 @@ int main()
             DLA_status=Xil_In64(STATUS_FLAGS);
             read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
         }
+        //=============================
+        //        Tile End
+        //=============================
+        XTime_GetTime(&tEnd);
+        tExeCycle = tEnd - tStart - tCalib;
+        tAccum += tExeCycle;
+        xil_printf("Fully-Connected 1 Tile %dB execution %d cycles \n\r", j, tExeCycle);
 
 
     }// fc1 output channel loop   
@@ -1363,6 +1467,7 @@ int main()
     //    Fully-Connected 2 
     //==========================
     xil_printf("Fully-Connected 2\n\r");
+    XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
     //=============================
@@ -1463,15 +1568,22 @@ int main()
         DLA_status=Xil_In64(STATUS_FLAGS);
         read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
     }
-
+    //=============================
+    //        Tile End
+    //=============================
+    XTime_GetTime(&tEnd);
+	tExeCycle = tEnd - tStart - tCalib;
+	tAccum += tExeCycle;
+	xil_printf("Fully-Connected 2 execution %d cycles \n\r", tExeCycle);
 
     //=============================
     //       Print Prediction
     //=============================
+    xil_printf("\n\rInference time %d cycles \n\r", tAccum);
     predict_print();
 
 
-    xil_printf("\n\rInference Done!!!\n\r", DLA_cmd);
+    xil_printf("\n\rInference Done!!!\n\r");
 
     cleanup_platform();
     return 0;
