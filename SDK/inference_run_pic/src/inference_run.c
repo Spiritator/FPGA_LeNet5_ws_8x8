@@ -121,8 +121,8 @@ void read_status(uint64_t dla_status, bool* dataload_ready, bool* tile_done, boo
     *op_done= dla_status & 4;
     *AXI4_cmdack= dla_status & 8;
     *AXI4_error= dla_status & 16;
-    *FSM_comp= (dla_status>>5) & 15;
-    *FSM_data= (dla_status>>9) & 15;
+    *FSM_comp= (dla_status>>8) & 15;
+    *FSM_data= (dla_status>>12) & 15;
 };
 
 void predict_print(void)

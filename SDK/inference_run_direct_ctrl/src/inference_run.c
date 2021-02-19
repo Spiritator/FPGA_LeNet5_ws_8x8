@@ -53,6 +53,7 @@
 #include "xil_io.h"
 #include "xil_cache.h"
 #include "xtime_l.h"
+#include "sleep.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -121,8 +122,8 @@ void read_status(uint64_t dla_status, bool* dataload_ready, bool* tile_done, boo
     *op_done= dla_status & 4;
     *AXI4_cmdack= dla_status & 8;
     *AXI4_error= dla_status & 16;
-    *FSM_comp= (dla_status>>5) & 15;
-    *FSM_data= (dla_status>>9) & 15;
+    *FSM_comp= (dla_status>>8) & 15;
+    *FSM_data= (dla_status>>12) & 15;
 };
 
 void predict_print(void)
@@ -141,6 +142,7 @@ int main()
     int fmap_len[4]={1024,1568,1176,16};
     int fmap_idx[4]={1024,0,0,0};
     int wght_idx[4];
+    // uint64_t DLA_status;
 
     init_platform();
     Xil_DCacheDisable();
@@ -217,8 +219,7 @@ int main()
     // while(true)
     // {
     //     DLA_status=Xil_In64(STATUS_FLAGS);
-    //     read_status(DLA_status, &dataload_ready, &tile_done, &op_done, &AXI4_cmdack, &AXI4_error, &FSM_comp, &FSM_data);
-    //     printf("datald_rdy %d | tile_dn %d | op_dn %d | AXI_cmdack %d | AXI_err %d | FSM_cmp %d | FSM_dt %d \r", dataload_ready, tile_done, op_done, AXI4_cmdack, AXI4_error, FSM_comp, FSM_data);
+    //     xil_printf("DLA status %016llx\r", DLA_status);
     // }
     
 
@@ -245,6 +246,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000000000290001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -253,13 +256,17 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600000004000002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    // check tile done
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -269,7 +276,9 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200003100004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
-    
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
+
     //=============================
     //        Tile End
     //=============================
@@ -300,6 +309,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000014800290001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -308,13 +319,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600000004000002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -324,6 +338,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600388003100004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -357,13 +373,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200003100002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -373,6 +392,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200000C40004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -403,13 +424,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600388003100002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -419,6 +443,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600262000C40004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -452,6 +478,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000029003220001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -460,13 +488,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -476,6 +507,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600510001880004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -507,6 +540,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10001BA003220001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -515,13 +550,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -531,6 +569,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005D4001880004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -562,6 +602,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x100034B003220001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -570,13 +612,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600200001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -586,6 +631,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600698001880004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -619,13 +666,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600510001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -635,6 +685,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600510000620004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -666,13 +718,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005D4001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -682,6 +737,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600541000620004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -713,13 +770,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600698001880002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -729,6 +789,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1600572000620004);
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS)!=4){}
 
     //=============================
     //        Tile End
@@ -746,7 +808,7 @@ int main()
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 0
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 0A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 0A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -766,6 +828,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10004DC003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -774,12 +838,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -789,14 +857,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 0A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 0A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 0
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 0B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 0B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -816,6 +884,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10006C8803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -824,13 +894,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -838,6 +911,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075C000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -847,13 +922,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 0B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 0B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 1
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 1A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 1A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -873,6 +948,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10008B0803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -881,12 +958,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -896,14 +977,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 1A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 1A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 1
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 1B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 1B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -923,6 +1004,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000A9D003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -931,13 +1014,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -945,6 +1031,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075C800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -954,13 +1042,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 1B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 1B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 2
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 2A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 2A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -980,6 +1068,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000C85003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -988,12 +1078,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1003,14 +1097,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 2A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 2A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 2
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 2B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 2B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1030,6 +1124,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1000E71803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1038,13 +1134,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1052,6 +1151,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075D000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1061,12 +1162,12 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 2B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 2B execution %d cycles \n\r", tExeCycle);
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 3
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 3A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 3A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1086,6 +1187,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001059803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1094,12 +1197,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1109,14 +1216,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 3A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 3A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 3
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 3B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 3B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1136,6 +1243,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001246003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1144,13 +1253,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1158,6 +1270,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075D800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1167,13 +1281,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 3B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 3B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 4
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 4A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 4A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1193,6 +1307,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x100142E003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1201,12 +1317,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1216,14 +1336,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 4A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 4A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 4
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 4B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 4B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1243,6 +1363,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x100161A803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1251,13 +1373,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1265,6 +1390,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075E000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1274,13 +1401,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 4B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 4B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 5
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 5A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 5A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1300,6 +1427,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001802803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1308,12 +1437,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1323,14 +1456,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 5A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 5A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 5
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 5B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 5B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1350,6 +1483,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10019EF003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1358,13 +1493,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1372,6 +1510,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075E800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1381,13 +1521,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 5B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 5B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 6
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 6A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 6A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1407,6 +1547,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001BD7003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1415,12 +1557,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1430,14 +1576,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 6A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 6A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 6
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 6B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 6B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1457,6 +1603,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001DC3803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1465,13 +1613,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1479,6 +1630,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075F000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1488,13 +1641,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 6B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 6B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 7
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 7A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 7A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1514,6 +1667,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1001FAB803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1522,12 +1677,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1537,14 +1696,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 7A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 7A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 7
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 7B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 7B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1564,6 +1723,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002198003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1572,13 +1733,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1586,6 +1750,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x160075F800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1595,13 +1761,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 7B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 7B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 8
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 8A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 8A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1621,6 +1787,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002380003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1629,12 +1797,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1644,14 +1816,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 8A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 8A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 8
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 8B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 8B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1671,6 +1843,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x100256C803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1679,13 +1853,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1693,6 +1870,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600760000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1702,13 +1881,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 8B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 8B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 9
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 9A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 9A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1728,6 +1907,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002754803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1736,12 +1917,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1751,14 +1936,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 9A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 9A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 9
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 9B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 9B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1778,6 +1963,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002941003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1786,13 +1973,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1800,6 +1990,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600760800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1809,13 +2001,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 9B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 9B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 10
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 10A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 10A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1835,6 +2027,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002B29003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1843,12 +2037,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1858,14 +2056,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 10A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 10A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 10
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 10B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 10B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1885,6 +2083,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002D15803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1893,13 +2093,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -1907,6 +2110,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600761000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -1916,13 +2121,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 10B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 10B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 11
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 11A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 11A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1942,6 +2147,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1002EFD803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -1950,12 +2157,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -1965,14 +2176,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 11A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 11A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 11
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 11B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 11B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -1992,6 +2203,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10030EA003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2000,13 +2213,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2014,6 +2230,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600761800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -2023,13 +2241,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 11B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 11B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 12
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 12A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 12A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2049,6 +2267,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10032D2003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2057,12 +2277,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -2072,14 +2296,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 12A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 12A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 12
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 12B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 12B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2099,6 +2323,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10034BE803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2107,13 +2333,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2121,6 +2350,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600762000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -2130,13 +2361,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 12B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 12B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 13
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 13A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 13A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2156,6 +2387,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x10036A6803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2164,12 +2397,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -2179,14 +2416,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 13A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 13A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 13
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 13B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 13B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2206,6 +2443,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1003893003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2214,13 +2453,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2228,6 +2470,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600762800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -2237,13 +2481,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 13B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 13B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 14
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 14A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 14A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2263,6 +2507,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1003A7B003D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2271,12 +2517,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -2286,14 +2536,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 14A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 14A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 14
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 14B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 14B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2313,6 +2563,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1003C67803D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2321,13 +2573,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2335,6 +2590,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600763000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -2344,13 +2601,13 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 14B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 14B execution %d cycles \n\r", tExeCycle);
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel A TIle 15
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 15A\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 15A\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2370,6 +2627,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1003E4F803D90001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2378,12 +2637,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x16005100007B0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     // op_go cmd lift
     Xil_Out64(OP_CTRL,0x0000000000000000);
 
@@ -2393,14 +2656,14 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 15A execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 15A execution %d cycles \n\r", tExeCycle);
 
 
 
     //=================================================
     //    Fully-Connected 1 Input Channel B TIle 15
     //=================================================
-    xil_printf("Fully-Connected 1 Tile 15B\n\r",j);
+    xil_printf("Fully-Connected 1 Tile 15B\n\r");
     XTime_GetTime(&tStart);
     //=============================
     //     Configuration Set
@@ -2420,6 +2683,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x100403C003D00001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2428,13 +2693,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160054D8007A0002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2442,6 +2710,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1600763800020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 
@@ -2451,7 +2721,7 @@ int main()
     XTime_GetTime(&tEnd);
     tExeCycle = tEnd - tStart - tCalib;
     tAccum += tExeCycle;
-    xil_printf("Fully-Connected 1 Tile 15B execution %d cycles \n\r", j, tExeCycle);
+    xil_printf("Fully-Connected 1 Tile 15B execution %d cycles \n\r", tExeCycle);
 
 
     
@@ -2478,6 +2748,8 @@ int main()
     Xil_Out64(BURST_CTRL,0x1004224001020001);
     // load weight cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 3 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=3){}
 
     //=============================
     //        Load Ifmap
@@ -2486,13 +2758,16 @@ int main()
     Xil_Out64(BURST_CTRL,0x160075C000100002);
     // load ifmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
+    // check comp 8 data 0
+    while (Xil_In8(STATUS_FLAGS+1)!=8){}
 
     //=============================
     //        Operation Go
     //=============================
     // op_go 
     Xil_Out64(OP_CTRL,0x0000000000000004);
-    
+    while (Xil_In8(STATUS_FLAGS)!=2){}
+
     //=============================
     //        Offload Ofmap
     //=============================
@@ -2500,6 +2775,8 @@ int main()
     Xil_Out64(OP_CTRL,0x0000000000000000);
     // offload ofmap cmd
     Xil_Out64(BURST_CTRL,0x1700000000020004);
+    // check op_done
+    while (Xil_In8(STATUS_FLAGS+1)!=176){}
     // offload ofmap cmd lift
     Xil_Out64(BURST_CTRL,0x1000000000010000);
 

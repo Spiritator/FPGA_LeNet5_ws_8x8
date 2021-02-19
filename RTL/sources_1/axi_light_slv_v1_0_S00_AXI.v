@@ -410,7 +410,7 @@
 	      // Address decoding for reading registers
 	      case ( axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] )
 		  	// status flags modification
-	        2'h0   : reg_data_out <= {51'd0,FSM_data,FSM_comp,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};//{51'd0,FSM_data,FSM_comp,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};
+	        2'h0   : reg_data_out <= {48'd0,FSM_data,FSM_comp,3'd0,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};//{51'd0,FSM_data,FSM_comp,AXI4_error,cmdackstate,op_done,tile_done,dataload_ready};
 	        2'h1   : reg_data_out <= slv_reg1;
 	        2'h2   : reg_data_out <= slv_reg2;
 	        2'h3   : reg_data_out <= slv_reg3;
