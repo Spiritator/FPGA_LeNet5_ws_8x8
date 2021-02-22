@@ -391,3 +391,79 @@ ofmap_sdk=np.frombuffer(ofmap_bytes,np.int8)
 differ=np.subtract(ofmap_sdk,pred_out)
 print(np.sum(np.abs(differ)))
 
+
+#%% Mnist dataset SDK bin files data prep
+
+import numpy as np
+from tensorflow.keras.datasets import mnist
+
+def preprocess_input_img_sdk_dataset(img):
+    # img shape (28,28)
+    img_processed=np.pad(img,((2, 2), (2, 2)),'constant',constant_values=0)
+    img_processed=np.multiply(img_processed,2**3)
+    img_processed=np.floor(img_processed)
+    img_processed=img_processed.astype(np.int8)
+    
+    img_processed=np.transpose(img_processed,[1,0])
+    img_processed=np.reshape(img_processed, [32*32,1])
+    img_processed=np.tile(img_processed,[1,5])
+    
+    roller=np.array([  0,   1,   2,   3,   4])
+    
+    for i in range(img_processed.shape[1]):
+        img_processed[:,i]=np.roll(img_processed[:,i],-roller[i])
+        
+    img_processed=np.pad(img_processed,((0, 0), (0, 3)),'constant',constant_values=0)
+    
+    return img_processed
+
+(_, _), (x_test, y_test) = mnist.load_data()
+x_test=x_test.astype('float32')
+x_test=np.divide(x_test,255)
+
+
+#%% Mnist dataset generate input pic bin files
+
+for picidx in range(x_test.shape[0]):
+    test_pic=x_test[picidx]
+    test_pic=preprocess_input_img_sdk_dataset(test_pic)
+    bt_test_pic=bytearray(test_pic)
+    
+    with open('../../dataset/mnist_pic/img%05d.bin'%picidx,'wb') as bin_img_file:
+        bin_img_file.write(bt_test_pic)
+
+# view_bytes=list()
+# with open('../../dataset/mnist_pic/img00000.bin','rb') as bin_img_file:
+#     byte=bin_img_file.read(1)
+#     while byte:
+#         view_bytes.append(byte)
+#         byte=bin_img_file.read(1)
+
+# view_bytes=np.array(view_bytes)
+# view_bytes=np.frombuffer(view_bytes,np.int8)
+# view_bytes=np.reshape(view_bytes,[1024,8])
+
+#%% Mnist dataset validate output pred bin files
+
+pred_sdk=np.zeros([10000,10],np.int8)
+for predidx in range(y_test.shape[0]):
+    test_pic=x_test[picidx]
+    test_pic=preprocess_input_img_sdk_dataset(test_pic)
+    bt_test_pic=bytearray(test_pic)
+    
+    pred_bytes=list()
+    with open('../../dataset/mnist_pred/pred%05d.bin'%predidx,'wb') as bin_pred_file:
+        byte=bin_pred_file.read(1)
+        while byte:
+            pred_bytes.append(byte)
+            byte=bin_pred_file.read(1)
+
+    pred_bytes=np.array(pred_bytes)[:10]
+    pred_bytes=np.frombuffer(pred_bytes,np.int8)
+    pred_sdk[predidx]=pred_bytes
+
+pred_sdk=np.argmax(pred_sdk,axis=1)
+
+differ=np.subtract(pred_sdk,y_test)
+print(np.sum(np.abs(differ)))
+
