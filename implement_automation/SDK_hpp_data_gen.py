@@ -240,8 +240,7 @@ with open('SDK_lib/ref_pic.hpp','w') as lib_file:
         lib_file.write(text_store)
                 
     lib_file.write('};')
-    
-
+        
 #%% ofmap data prep conv1 
 
 import numpy as np
@@ -424,46 +423,52 @@ x_test=np.divide(x_test,255)
 
 #%% Mnist dataset generate input pic bin files
 
-for picidx in range(x_test.shape[0]):
+import os
+
+for picidx in range(10000):
+    
     test_pic=x_test[picidx]
     test_pic=preprocess_input_img_sdk_dataset(test_pic)
     bt_test_pic=bytearray(test_pic)
     
-    with open('../../dataset/mnist_pic/img%05d.bin'%picidx,'wb') as bin_img_file:
+    pic_save_dir='../../dataset/mnist_hierachy_hex/%04x.bin'%picidx
+   
+    with open(pic_save_dir,'wb') as bin_img_file:
         bin_img_file.write(bt_test_pic)
 
-# view_bytes=list()
-# with open('../../dataset/mnist_pic/img00000.bin','rb') as bin_img_file:
-#     byte=bin_img_file.read(1)
-#     while byte:
-#         view_bytes.append(byte)
-#         byte=bin_img_file.read(1)
 
-# view_bytes=np.array(view_bytes)
-# view_bytes=np.frombuffer(view_bytes,np.int8)
-# view_bytes=np.reshape(view_bytes,[1024,8])
+# for picidx in np.ndindex(10,1000):
+    
+#     test_pic=x_test[np.ravel_multi_index(picidx,[10,1000])]
+#     test_pic=preprocess_input_img_sdk_dataset(test_pic)
+#     bt_test_pic=bytearray(test_pic)
+    
+#     pic_save_dir='../../dataset/mnist_hierachy3/%d'%picidx[0]
+#     if not os.path.isdir(pic_save_dir):
+#         os.mkdir(pic_save_dir)
+   
+#     with open(pic_save_dir+'/img%03d.bin'%picidx[1],'wb') as bin_img_file:
+#         bin_img_file.write(bt_test_pic)
+
 
 #%% Mnist dataset validate output pred bin files
 
-pred_sdk=np.zeros([10000,10],np.int8)
-for predidx in range(y_test.shape[0]):
-    test_pic=x_test[picidx]
-    test_pic=preprocess_input_img_sdk_dataset(test_pic)
-    bt_test_pic=bytearray(test_pic)
-    
-    pred_bytes=list()
-    with open('../../dataset/mnist_pred/pred%05d.bin'%predidx,'wb') as bin_pred_file:
+pred_sdk=list()
+with open('SDK_bin/dataset_pred.bin','rb') as bin_pred_file:
+    byte=bin_pred_file.read(1)
+    while byte:
+        pred_sdk.append(byte)
         byte=bin_pred_file.read(1)
-        while byte:
-            pred_bytes.append(byte)
-            byte=bin_pred_file.read(1)
 
-    pred_bytes=np.array(pred_bytes)[:10]
-    pred_bytes=np.frombuffer(pred_bytes,np.int8)
-    pred_sdk[predidx]=pred_bytes
+pred_sdk=np.array(pred_sdk)
+pred_sdk=np.frombuffer(pred_sdk,np.int8)
+
+pred_sdk=np.reshape(pred_sdk, [10000,16])
+pred_sdk=pred_sdk[:,:10]
 
 pred_sdk=np.argmax(pred_sdk,axis=1)
 
-differ=np.subtract(pred_sdk,y_test)
-print(np.sum(np.abs(differ)))
+accuracy=np.mean(np.equal(pred_sdk,y_test))
+
+print('FPGA inference accuracy %.6f'%accuracy)
 

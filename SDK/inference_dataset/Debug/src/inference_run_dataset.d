@@ -28,7 +28,7 @@ src/inference_run_dataset.o src/inference_run_dataset.o: \
  ../../inference_dataset_bsp/psu_cortexa53_0/include/ffconf.h \
  ../../inference_dataset_bsp/psu_cortexa53_0/include/xplatform_info.h \
  ../src/conv1_wght.hpp ../src/conv2_wght.hpp ../src/fc1_wght.hpp \
- ../src/fc2_wght.hpp ../src/ref_pic.hpp
+ ../src/fc2_wght.hpp
 
 ../src/platform.h:
 
@@ -93,5 +93,3 @@ src/inference_run_dataset.o src/inference_run_dataset.o: \
 ../src/fc1_wght.hpp:
 
 ../src/fc2_wght.hpp:
-
-../src/ref_pic.hpp:

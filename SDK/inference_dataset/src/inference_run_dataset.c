@@ -65,7 +65,7 @@
 #include "conv2_wght.hpp"
 #include "fc1_wght.hpp"
 #include "fc2_wght.hpp"
-#include "ref_pic.hpp"
+//#include "dataset_filenames.hpp"
 
 #define DDR_BASEADDR    XPAR_DDR_MEM_BASEADDR + 0x10000000
 #define IFMAP_BASEADDR  XPAR_DDR_MEM_BASEADDR + 0x16000000
@@ -2338,10 +2338,10 @@ int main()
     int fmap_len[4]={1024,1568,1176,16};
     int fmap_idx[4]={1024,0,0,0};
     int wght_idx[4];
-    uint64_t DLA_status;
+    // uint64_t DLA_status;
 
-    static char *PicFileName;
     int SD_Status;
+    char filenameiter[9];
 
     init_platform();
     Xil_DCacheDisable();
@@ -2384,12 +2384,8 @@ int main()
     {
         Xil_Out64(DDR_BASEADDR+(wght_idx[3]+i)*wordbyte,fc2_wght[i]);
     }    
+    
 
-    // // ref input pic
-    // for (i = 0; i < 1024; i++)
-    // {
-    //     Xil_Out64(IFMAP_BASEADDR+i*wordbyte,ref_pic[i]);
-    // }
 
     //=============================
     //       Setup SD Card
@@ -2397,14 +2393,12 @@ int main()
     SD_Status = SD_card_setup();
 	if (SD_Status != XST_SUCCESS) 
 		xil_printf("SD Setup failed \r\n");
-	else
-        xil_printf("Successfully Setup SD Card \r\n");
 
 
     //=============================
     //        Timer Setup
     //=============================
-	XTime tStart, tEnd, tCalib, tExeCycle;
+	XTime tStart, tEnd, tCalib, tExeCycle, tSDCycle;
 	XTime tAccum = 0;
 
 	XTime_GetTime(&tStart);
@@ -2413,23 +2407,6 @@ int main()
 	tCalib = tEnd - tStart;
 	xil_printf("tStart = %d cycle | tEnd = %d cycle | tCalib = %d cycle \n\r", tStart, tEnd, tCalib);
 
-
-    //=============================
-    //  Read SD Card Input Image
-    //=============================
-	XTime_GetTime(&tStart);
-
-	PicFileName="img00000.bin";
-	SD_Status = read_SD_card_pic(PicFileName);
-	if (SD_Status != XST_SUCCESS) 
-        xil_printf("SD Read failed \r\n");
-	else
-	    xil_printf("Successfully ran SD Read \r\n");
-
-    XTime_GetTime(&tEnd);
-	tExeCycle = tEnd - tStart - tCalib;
-	tAccum += tExeCycle;
-    xil_printf("SD card read %d cycles \n\r", tExeCycle);
 
     //=============================
     //     Inference Control
@@ -2442,27 +2419,45 @@ int main()
     //======================================================
     //         HALT HALT HALT HALT HALT HALT HALT
     //======================================================
-    while(true)
+    // while(true)
+    // {
+    //     DLA_status=Xil_In64(STATUS_FLAGS);
+    //     xil_printf("DLA status %016llx\r", DLA_status);
+    // }
+
+    for (i = 0; i < 10000; i++)
     {
-        DLA_status=Xil_In64(STATUS_FLAGS);
-        xil_printf("DLA status %016llx\r", DLA_status);
+        //=============================
+        //  Read SD Card Input Image
+        //=============================
+        XTime_GetTime(&tStart);
+
+        sprintf(filenameiter,"%04x.bin",i);
+        SD_Status = read_SD_card_pic(filenameiter);
+        if (SD_Status != XST_SUCCESS) 
+            xil_printf("SD Read failed \r\n");
+        
+        XTime_GetTime(&tEnd);
+        tSDCycle = tEnd - tStart - tCalib;
+        tAccum += tSDCycle;
+
+        //=============================
+        //       Inference Run
+        //=============================
+        XTime_GetTime(&tStart);
+
+        inference_op(PRED_BASEADDR+i*16);
+
+        XTime_GetTime(&tEnd);
+        tExeCycle = tEnd - tStart - tCalib;
+        tAccum += tExeCycle;
+        xil_printf("img%04d SD load %d inference %d cycles \r", i, tSDCycle, tExeCycle);
     }
-    
-    XTime_GetTime(&tStart);
-
-    inference_op(PRED_BASEADDR);
-
-	XTime_GetTime(&tEnd);
-	tExeCycle = tEnd - tStart - tCalib;
-	tAccum += tExeCycle;
-    xil_printf("inference run %d cycles \n\r", tExeCycle);
 
     //=============================
     //       Print Prediction
     //=============================
     xil_printf("\n\rInference time %d cycles \n\r", tAccum);
-    predict_print();
-
 
     xil_printf("\n\rInference Done!!!\n\r");
 
