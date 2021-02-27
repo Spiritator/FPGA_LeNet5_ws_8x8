@@ -425,16 +425,16 @@ x_test=np.divide(x_test,255)
 
 import os
 
-for picidx in range(10000):
+# for picidx in range(10000):
     
-    test_pic=x_test[picidx]
-    test_pic=preprocess_input_img_sdk_dataset(test_pic)
-    bt_test_pic=bytearray(test_pic)
+#     test_pic=x_test[picidx]
+#     test_pic=preprocess_input_img_sdk_dataset(test_pic)
+#     bt_test_pic=bytearray(test_pic)
     
-    pic_save_dir='../../dataset/mnist_hierachy_hex/%04x.bin'%picidx
+#     pic_save_dir='../../dataset/mnist_hierachy_hex/%04x.bin'%picidx
    
-    with open(pic_save_dir,'wb') as bin_img_file:
-        bin_img_file.write(bt_test_pic)
+#     with open(pic_save_dir,'wb') as bin_img_file:
+#         bin_img_file.write(bt_test_pic)
 
 
 # for picidx in np.ndindex(10,1000):
@@ -450,6 +450,20 @@ for picidx in range(10000):
 #     with open(pic_save_dir+'/img%03d.bin'%picidx[1],'wb') as bin_img_file:
 #         bin_img_file.write(bt_test_pic)
 
+for picidx in np.ndindex(500,20):
+    
+    test_pic=x_test[np.ravel_multi_index(picidx,[500,20])]
+    test_pic=preprocess_input_img_sdk_dataset(test_pic)
+    bt_test_pic=bytearray(test_pic)
+    
+    pic_save_dir='../../dataset/mnist_fmultipic2/%03d.bin'%picidx[0]
+   
+    if picidx[1]==0:
+        with open(pic_save_dir,'wb') as bin_img_file:
+            bin_img_file.write(bt_test_pic)
+    else:        
+        with open(pic_save_dir,'ab') as bin_img_file:
+            bin_img_file.write(bt_test_pic)
 
 #%% Mnist dataset validate output pred bin files
 
@@ -470,5 +484,5 @@ pred_sdk=np.argmax(pred_sdk,axis=1)
 
 accuracy=np.mean(np.equal(pred_sdk,y_test))
 
-print('FPGA inference accuracy %.6f'%accuracy)
+print('FPGA inference accuracy %.4f'%accuracy)
 

@@ -174,7 +174,7 @@ int SD_card_setup()
     return XST_SUCCESS;
 }
 
-int read_SD_card_pic(const char *SD_File)
+int read_SD_card_pic(const char *SD_File, int file_byte_offset)
 {
     FRESULT Res;
 	UINT NumBytesRead;
@@ -187,7 +187,7 @@ int read_SD_card_pic(const char *SD_File)
     }
 
 	// * Pointer to beginning of file .
-	Res = f_lseek(&fil, 0);
+	Res = f_lseek(&fil, file_byte_offset);
 	if (Res) { return XST_FAILURE; }
 
     // * Read data from file.
@@ -2333,7 +2333,7 @@ void inference_op(uint32_t pred_addr)
 int main()
 {
     const int wordbyte=8;
-    int i,j;
+    int i,j,cnt=0;
     int wght_len[4]={82,2406,31376,258};
     int fmap_len[4]={1024,1568,1176,16};
     int fmap_idx[4]={1024,0,0,0};
@@ -2341,7 +2341,7 @@ int main()
     // uint64_t DLA_status;
 
     int SD_Status;
-    char filenameiter[9];
+    char filenameiter[8];
 
     init_platform();
     Xil_DCacheDisable();
@@ -2425,39 +2425,44 @@ int main()
     //     xil_printf("DLA status %016llx\r", DLA_status);
     // }
 
-    for (i = 0; i < 10000; i++)
+    for (i = 0; i < 500; i++)
     {
-        //=============================
-        //  Read SD Card Input Image
-        //=============================
-        XTime_GetTime(&tStart);
+        for (j = 0; j < 20; j++)
+        {
+            //=============================
+            //  Read SD Card Input Image
+            //=============================
+            XTime_GetTime(&tStart);
 
-        sprintf(filenameiter,"%04x.bin",i);
-        SD_Status = read_SD_card_pic(filenameiter);
-        if (SD_Status != XST_SUCCESS) 
-            xil_printf("SD Read failed \r\n");
-        
-        XTime_GetTime(&tEnd);
-        tSDCycle = tEnd - tStart - tCalib;
-        tAccum += tSDCycle;
+            sprintf(filenameiter,"%03d.bin",i);
+            SD_Status = read_SD_card_pic(filenameiter,j*8192);
+            if (SD_Status != XST_SUCCESS) 
+                xil_printf("SD Read failed \r\n");
+            
+            XTime_GetTime(&tEnd);
+            tSDCycle = tEnd - tStart - tCalib;
+            tAccum += tSDCycle;
 
-        //=============================
-        //       Inference Run
-        //=============================
-        XTime_GetTime(&tStart);
+            //=============================
+            //       Inference Run
+            //=============================
+            XTime_GetTime(&tStart);
 
-        inference_op(PRED_BASEADDR+i*16);
+            inference_op(PRED_BASEADDR+cnt*16);
 
-        XTime_GetTime(&tEnd);
-        tExeCycle = tEnd - tStart - tCalib;
-        tAccum += tExeCycle;
-        xil_printf("img%04d SD load %d inference %d cycles \r", i, tSDCycle, tExeCycle);
+            XTime_GetTime(&tEnd);
+            tExeCycle = tEnd - tStart - tCalib;
+            tAccum += tExeCycle;
+            xil_printf("img%04d SD load %d inference %d cycles \r", cnt, tSDCycle, tExeCycle);
+
+            cnt++;
+        }
     }
 
     //=============================
     //       Print Prediction
     //=============================
-    xil_printf("\n\rInference time %d cycles \n\r", tAccum);
+    xil_printf("\n\rInference time %lld cycles \n\r", tAccum);
 
     xil_printf("\n\rInference Done!!!\n\r");
 
